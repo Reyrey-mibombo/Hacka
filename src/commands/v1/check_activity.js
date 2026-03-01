@@ -114,8 +114,8 @@ module.exports = {
         const tempId = `${interaction.channelId}-${Date.now()}`;
         viewModes.set(tempId, 'full');
 
-        // Build initial embed – FIXED: changed null → 'all'
-        const { embed } = await buildEnhancedEmbed(
+        // Build initial embed – now using the new high‑tech embed builder
+        const { embed } = await buildHighTechEmbed(
             interaction, targetUser, member, presence, activities, bannerURL, accentColor, history, 'full', 'all', 0
         );
 
@@ -190,7 +190,6 @@ module.exports = {
         // --- Collect optional buttons based on activity ---
         const optionalButtons = [];
 
-        // Spotify buttons
         const spotifyActivity = activities.find(a => a.name === 'Spotify');
         if (spotifyActivity && spotifyActivity.details && spotifyActivity.state) {
             optionalButtons.push(
@@ -205,7 +204,6 @@ module.exports = {
             );
         }
 
-        // Game button
         const playingActivity = activities.find(a => a.type === ActivityType.Playing);
         if (playingActivity) {
             optionalButtons.push(
@@ -216,7 +214,6 @@ module.exports = {
             );
         }
 
-        // Movie button
         const watchingActivity = activities.find(a => a.type === ActivityType.Watching);
         if (watchingActivity) {
             optionalButtons.push(
@@ -227,7 +224,6 @@ module.exports = {
             );
         }
 
-        // Join game button
         const joinableActivity = activities.find(a => a.secrets?.join);
         if (joinableActivity) {
             optionalButtons.push(
@@ -238,7 +234,6 @@ module.exports = {
             );
         }
 
-        // Graph button (if canvas available)
         if (Canvas) {
             optionalButtons.push(
                 new ButtonBuilder()
@@ -248,7 +243,6 @@ module.exports = {
             );
         }
 
-        // Stop button (if live)
         if (live) {
             optionalButtons.push(
                 new ButtonBuilder()
@@ -258,7 +252,7 @@ module.exports = {
             );
         }
 
-        // --- Distribute optional buttons across rows, starting with row3 ---
+        // --- Distribute optional buttons across rows ---
         const row3 = new ActionRowBuilder();
         fixedRow3.forEach(btn => row3.addComponents(btn));
 
@@ -271,13 +265,11 @@ module.exports = {
             } else if (row4.components.length < 5) {
                 row4.addComponents(btn);
             } else {
-                // Both rows full – cannot add more
                 console.warn('Too many optional buttons, some omitted');
                 break;
             }
         }
 
-        // Row5 always has "More" and the extra feature buttons
         const row5 = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId('insights')
@@ -301,14 +293,12 @@ module.exports = {
                 .setStyle(ButtonStyle.Primary)
         );
 
-        // Assemble final components (filter out empty rows)
         const components = [row1, row2, row3];
         if (row4.components.length > 0) components.push(row4);
         components.push(row5);
 
         const message = await interaction.editReply({ embeds: [embed], components });
 
-        // Update viewModes with actual message id
         viewModes.delete(tempId);
         viewModes.set(message.id, 'full');
 
@@ -319,11 +309,10 @@ module.exports = {
 
         const settings = userSettings.get(interaction.user.id) || { liveInterval: 5 };
 
-        // Collector for main message
+        // Collector (fixed: no componentType restriction)
         const collector = message.createMessageComponentCollector({
             filter: i => i.user.id === interaction.user.id,
-            time: live ? 600000 : 300000,
-            componentType: ComponentType.ActionRow
+            time: live ? 600000 : 300000
         });
 
         if (live) {
@@ -347,7 +336,6 @@ module.exports = {
                         return;
                     }
 
-                    // Update history
                     if (activityHistory.has(targetUser.id)) {
                         const hist = activityHistory.get(targetUser.id);
                         hist.push({
@@ -358,7 +346,6 @@ module.exports = {
                         if (hist.length > 10) hist.shift();
                     }
 
-                    // Check reminders
                     const reminderKey = `${interaction.user.id}-${targetUser.id}`;
                     if (reminders.get(reminderKey)) {
                         await interaction.user.send(`🔔 **${targetUser.username}** changed activity!`).catch(() => {});
@@ -397,7 +384,7 @@ module.exports = {
                     } catch { /* ignore */ }
 
                     const currentView = viewModes.get(message.id) || 'full';
-                    const { embed: updatedEmbed } = await buildEnhancedEmbed(
+                    const { embed: updatedEmbed } = await buildHighTechEmbed(
                         interaction, targetUser, freshMember, freshPresence, freshActivities,
                         freshBanner, freshAccent, activityHistory.get(targetUser.id), currentView, currentFilter, updates
                     );
@@ -411,7 +398,7 @@ module.exports = {
             }, settings.liveInterval * 1000);
         }
 
-        // --- BUTTON HANDLER (full original code) ---
+        // --- BUTTON HANDLER (full, original code) ---
         collector.on('collect', async i => {
             if (i.customId === 'refresh') {
                 await i.deferUpdate();
@@ -432,7 +419,6 @@ module.exports = {
                     return;
                 }
 
-                // Update history
                 if (activityHistory.has(targetUser.id)) {
                     const hist = activityHistory.get(targetUser.id);
                     hist.push({
@@ -461,7 +447,7 @@ module.exports = {
                 } catch { /* ignore */ }
 
                 const currentView = viewModes.get(message.id) || 'full';
-                const { embed: refreshedEmbed } = await buildEnhancedEmbed(
+                const { embed: refreshedEmbed } = await buildHighTechEmbed(
                     interaction, targetUser, refreshedMember, refreshedPresence, refreshedActivities,
                     freshBanner, freshAccent, activityHistory.get(targetUser.id), currentView, currentFilter, updates
                 );
@@ -470,9 +456,6 @@ module.exports = {
             } else if (i.customId === 'stop') {
                 await i.deferUpdate();
                 if (interval) clearInterval(interval);
-                // Disable stop button and select menu (not fully implemented here, but original code did it)
-                // For brevity, we keep the original disabling logic. In the full original, it disables the stop button.
-                // We'll include the simplified version: just stop the collector and clear components.
                 await message.edit({ components: [] });
                 collector.stop();
 
@@ -480,7 +463,7 @@ module.exports = {
                 await i.deferUpdate();
                 currentFilter = i.values[0];
                 const currentView = viewModes.get(message.id) || 'full';
-                const { embed: filteredEmbed } = await buildEnhancedEmbed(
+                const { embed: filteredEmbed } = await buildHighTechEmbed(
                     interaction, targetUser, member, presence, activities,
                     bannerURL, accentColor, activityHistory.get(targetUser.id), currentView, currentFilter, updates
                 );
@@ -550,7 +533,7 @@ module.exports = {
             } else if (i.customId === 'share') {
                 await i.deferUpdate();
                 const currentView = viewModes.get(message.id) || 'full';
-                const { embed: shareEmbed } = await buildEnhancedEmbed(
+                const { embed: shareEmbed } = await buildHighTechEmbed(
                     interaction, targetUser, member, presence, activities,
                     bannerURL, accentColor, activityHistory.get(targetUser.id), currentView, currentFilter, updates
                 );
@@ -603,8 +586,8 @@ module.exports = {
                     const otherBanner = await otherUser.fetch().then(u => u.bannerURL({ size: 1024 })).catch(() => null);
                     const otherAccent = otherUser.accentColor;
                     
-                    const embed1 = await buildEnhancedEmbed(interaction, targetUser, member, presence, activities, bannerURL, accentColor, activityHistory.get(targetUser.id), 'full', currentFilter, updates);
-                    const embed2 = await buildEnhancedEmbed(interaction, otherUser, otherMember, otherPresence || { status: 'offline' }, otherActivities, otherBanner, otherAccent, activityHistory.get(otherUser.id), 'full', 'all', 0);
+                    const embed1 = await buildHighTechEmbed(interaction, targetUser, member, presence, activities, bannerURL, accentColor, activityHistory.get(targetUser.id), 'full', currentFilter, updates);
+                    const embed2 = await buildHighTechEmbed(interaction, otherUser, otherMember, otherPresence || { status: 'offline' }, otherActivities, otherBanner, otherAccent, activityHistory.get(otherUser.id), 'full', 'all', 0);
                     
                     await modalSubmit.editReply({ 
                         content: `**Comparison: ${targetUser.username} vs ${otherUser.username}**`,
@@ -700,7 +683,6 @@ module.exports = {
                     await i.followUp({ content: 'Not enough history for insights.', ephemeral: true });
                     return;
                 }
-                // Compute simple stats
                 const statusCounts = { online: 0, idle: 0, dnd: 0, offline: 0 };
                 const activityNames = new Map();
                 hist.forEach(entry => {
@@ -740,14 +722,12 @@ module.exports = {
 
             } else if (i.customId === 'random') {
                 await i.deferUpdate();
-                // Pick a random member from the guild (excluding bots maybe)
                 const members = await interaction.guild.members.fetch();
                 const nonBotMembers = members.filter(m => !m.user.bot).map(m => m);
                 if (nonBotMembers.length === 0) {
                     return i.followUp({ content: 'No non-bot members found.', ephemeral: true });
                 }
                 const randomMember = nonBotMembers[Math.floor(Math.random() * nonBotMembers.length)];
-                // Re-run command with new target
                 const newTarget = randomMember.user;
                 const newMember = randomMember;
                 const newPresence = newMember.presence;
@@ -762,7 +742,6 @@ module.exports = {
                     return i.editReply({ embeds: [offlineEmbed], components: [] });
                 }
 
-                // Update history for new user
                 if (!activityHistory.has(newTarget.id)) {
                     activityHistory.set(newTarget.id, []);
                 }
@@ -792,7 +771,7 @@ module.exports = {
                 } catch { /* ignore */ }
 
                 const currentView = viewModes.get(message.id) || 'full';
-                const { embed: newEmbed } = await buildEnhancedEmbed(
+                const { embed: newEmbed } = await buildHighTechEmbed(
                     interaction, newTarget, newMember, newPresence, newActivities,
                     newBanner, newAccent, newHist, currentView, 'all', updates
                 );
@@ -803,7 +782,7 @@ module.exports = {
                 const current = viewModes.get(message.id) || 'full';
                 const newMode = current === 'full' ? 'minimal' : 'full';
                 viewModes.set(message.id, newMode);
-                const { embed: toggledEmbed } = await buildEnhancedEmbed(
+                const { embed: toggledEmbed } = await buildHighTechEmbed(
                     interaction, targetUser, member, presence, activities,
                     bannerURL, accentColor, activityHistory.get(targetUser.id), newMode, currentFilter, updates
                 );
@@ -822,15 +801,12 @@ module.exports = {
                     const canvas = Canvas.createCanvas(400, 200);
                     const ctx = canvas.getContext('2d');
                     
-                    // Background
                     ctx.fillStyle = '#2f3136';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                     
-                    // Map status to numeric value (online=3, idle=2, dnd=1, offline=0)
                     const statusMap = { online: 3, idle: 2, dnd: 1, offline: 0 };
                     const points = hist.map(h => statusMap[h.status] || 0);
                     
-                    // Draw axes
                     ctx.strokeStyle = '#ffffff';
                     ctx.lineWidth = 2;
                     ctx.beginPath();
@@ -839,7 +815,6 @@ module.exports = {
                     ctx.lineTo(canvas.width - 30, canvas.height - 30);
                     ctx.stroke();
                     
-                    // Plot points
                     const xStep = (canvas.width - 100) / (points.length - 1);
                     ctx.fillStyle = '#00ff00';
                     points.forEach((val, i) => {
@@ -850,7 +825,6 @@ module.exports = {
                         ctx.fill();
                     });
                     
-                    // Connect lines
                     ctx.strokeStyle = '#00ff00';
                     ctx.lineWidth = 2;
                     ctx.beginPath();
@@ -862,7 +836,6 @@ module.exports = {
                     });
                     ctx.stroke();
                     
-                    // Add labels
                     ctx.fillStyle = '#ffffff';
                     ctx.font = '12px Arial';
                     ctx.fillText('Status Timeline', 150, 30);
@@ -880,7 +853,6 @@ module.exports = {
                 }
 
             } else if (i.customId === 'more') {
-                // Create an ephemeral message with additional options
                 const moreRow1 = new ActionRowBuilder()
                     .addComponents(
                         new ButtonBuilder()
@@ -931,7 +903,6 @@ module.exports = {
                     ephemeral: true 
                 });
 
-                // Collector for the ephemeral message
                 const moreCollector = i.channel.createMessageComponentCollector({
                     filter: btn => btn.user.id === interaction.user.id,
                     time: 60000,
@@ -1191,7 +1162,8 @@ function buildTimeline(history) {
     return line;
 }
 
-async function buildEnhancedEmbed(interaction, targetUser, member, presence, activities, bannerURL, accentColor, history = [], viewMode = 'full', filter = 'all', updateCount = 0) {
+// ========== HIGH‑TECH EMBED BUILDER ==========
+async function buildHighTechEmbed(interaction, targetUser, member, presence, activities, bannerURL, accentColor, history = [], viewMode = 'full', filter = 'all', updateCount = 0) {
     const { createCustomEmbed } = require('../../utils/embeds');
 
     const statusColors = {
@@ -1205,87 +1177,88 @@ async function buildEnhancedEmbed(interaction, targetUser, member, presence, act
     if (!embedColor && accentColor) embedColor = accentColor;
     if (!embedColor) embedColor = statusColors[presence.status] || 'info';
 
-    let description = '';
+    const fields = [];
 
+    // 1. Profile Information
+    const profileLines = [];
     const statusEmoji = presence.status === 'online' ? '🟢' : presence.status === 'idle' ? '🌙' : presence.status === 'dnd' ? '⛔' : '⚫';
-    description += `${statusEmoji} **Status:** ${presence.status.toUpperCase()}\n`;
-
+    profileLines.push(`${statusEmoji} **Status:** ${presence.status.toUpperCase()}`);
     if (presence.clientStatus) {
         const devices = [];
         if (presence.clientStatus.desktop) devices.push(`🖥️ Desktop (${presence.clientStatus.desktop})`);
         if (presence.clientStatus.mobile) devices.push(`📱 Mobile (${presence.clientStatus.mobile})`);
         if (presence.clientStatus.web) devices.push(`🌐 Web (${presence.clientStatus.web})`);
-        if (devices.length) {
-            description += `**Devices:** ${devices.join(' • ')}\n`;
-        }
+        if (devices.length) profileLines.push(`**Devices:** ${devices.join(' • ')}`);
+    }
+    profileLines.push(`📅 **Created:** <t:${Math.floor(targetUser.createdAt.getTime() / 1000)}:R>`);
+    profileLines.push(`📥 **Joined:** ${member.joinedAt ? `<t:${Math.floor(member.joinedAt.getTime() / 1000)}:R>` : 'Unknown'}`);
+    if (targetUser.premiumType) {
+        const nitroType = targetUser.premiumType === 2 ? 'Nitro' : 'Nitro Basic';
+        profileLines.push(`💎 **Nitro:** ${nitroType}`);
+    }
+    if (member.avatarDecorationURL()) {
+        profileLines.push(`✨ **Avatar Decoration:** [View](${member.avatarDecorationURL()})`);
+    }
+    if (bannerURL) profileLines.push(`🖼️ **Banner:** [View Banner](${bannerURL})`);
+    if (accentColor) profileLines.push(`🎨 **Accent Color:** \`#${accentColor.toString(16).padStart(6, '0')}\``);
+
+    fields.push({
+        name: '👤 Profile',
+        value: profileLines.join('\n'),
+        inline: false
+    });
+
+    // 2. Server Information (full mode only)
+    if (viewMode === 'full') {
+        const serverLines = [];
+        const highestRole = member.roles.highest.id !== interaction.guild.id ? member.roles.highest : null;
+        if (highestRole) serverLines.push(`🏅 **Highest Role:** ${highestRole} (${member.roles.cache.size - 1} total)`);
+        serverLines.push(`🔑 **Key Permissions:** ${formatPermissions(member.permissions)}`);
+        const boostingSince = getBoostingSince(member);
+        if (boostingSince) serverLines.push(`✨ **Boosting Since:** ${boostingSince}`);
+
+        fields.push({
+            name: '🛡️ Server',
+            value: serverLines.join('\n'),
+            inline: true
+        });
     }
 
+    // 3. Voice Information
     if (member.voice?.channel) {
         const voiceState = member.voice;
         const channelName = voiceState.channel.name;
         const channelType = voiceState.channel.type === 2 ? '📢' : '🔊';
-        let voiceInfo = `${channelType} **Voice:** ${channelName}`;
+        let voiceInfo = `${channelType} **Channel:** ${channelName}`;
         if (voiceState.streaming) voiceInfo += '\n 🖥️ Streaming';
         if (voiceState.selfDeaf || voiceState.serverDeaf) voiceInfo += '\n 🔇 Deafened';
         if (voiceState.selfMute || voiceState.serverMute) voiceInfo += '\n 🔈 Muted';
         if (voiceState.selfVideo) voiceInfo += '\n 📹 Video On';
-        description += `\n${voiceInfo}`;
         
         const others = getVoiceChannelMembers(member);
-        if (others) description += `\n 👥 **With:** ${others}`;
+        if (others) voiceInfo += `\n 👥 **With:** ${others}`;
         
         const quality = getVoiceChannelQuality(member);
-        if (quality) description += `\n 📡 ${quality}\n`;
+        if (quality) voiceInfo += `\n 📡 ${quality}`;
+
+        fields.push({
+            name: '🔊 Voice',
+            value: voiceInfo,
+            inline: viewMode === 'full' ? false : true
+        });
     }
 
-    if (viewMode === 'full') {
-        const highestRole = member.roles.highest.id !== interaction.guild.id ? member.roles.highest : null;
-        if (highestRole) {
-            description += `\n🏅 **Highest Role:** ${highestRole} (${member.roles.cache.size - 1} total)`;
-        }
-
-        const keyPerms = formatPermissions(member.permissions);
-        description += `\n🔑 **Key Permissions:** ${keyPerms}`;
-
-        const boostingSince = getBoostingSince(member);
-        if (boostingSince) {
-            description += `\n✨ **Boosting Since:** ${boostingSince}`;
-        }
-
-        if (targetUser.premiumType) {
-            const nitroType = targetUser.premiumType === 2 ? 'Nitro' : 'Nitro Basic';
-            description += `\n💎 **Nitro:** ${nitroType}`;
-        }
-
-        if (member.avatarDecorationURL()) {
-            description += `\n✨ **Avatar Decoration:** [View](${member.avatarDecorationURL()})`;
-        }
-    }
-
-    const created = `<t:${Math.floor(targetUser.createdAt.getTime() / 1000)}:R>`;
-    const joined = member.joinedAt ? `<t:${Math.floor(member.joinedAt.getTime() / 1000)}:R>` : 'Unknown';
-    description += `\n📅 **Created:** ${created} • **Joined:** ${joined}`;
-
-    if (bannerURL) {
-        description += `\n🖼️ **Banner:** [View Banner](${bannerURL})`;
-    }
-    if (accentColor) {
-        description += `\n🎨 **Accent Color:** \`#${accentColor.toString(16).padStart(6, '0')}\``;
-    }
-
-    const fields = [];
+    // 4. Activity Timeline (full mode only)
     if (viewMode === 'full' && history && history.length > 0) {
         const timeline = buildTimeline(history);
         fields.push({
-            name: '📊 Activity Timeline (last ' + history.length + ' updates)',
+            name: `📊 Activity Timeline (last ${history.length})`,
             value: timeline,
             inline: false
         });
     }
 
-    let image = null;
-    let thumbnail = targetUser.displayAvatarURL({ dynamic: true, size: 512 });
-
+    // 5. Current Activities
     let activitiesToShow = activities;
     if (filter !== 'all') {
         const index = parseInt(filter.replace('act_', ''), 10);
@@ -1302,19 +1275,16 @@ async function buildEnhancedEmbed(interaction, targetUser, member, presence, act
             case ActivityType.Playing:
                 activityString = `🎮 **Executing:** ${activity.name}`;
                 break;
-
             case ActivityType.Streaming:
                 activityString = `📺 **Streaming:** ${activity.url ? `[${activity.name}](${activity.url})` : activity.name}`;
                 break;
-
             case ActivityType.Listening:
                 if (activity.name === 'Spotify') {
-                    fieldName = '🎵 Spotify Performance';
+                    fieldName = '🎵 Spotify';
                     const track = activity.details || 'Unknown Track';
                     const artist = activity.state || 'Unknown Artist';
                     const album = activity.assets?.largeText || 'Unknown Album';
                     activityString = `🎧 **Track:** ${track}\n👤 **Artist:** ${artist}\n💿 **Album:** ${album}`;
-
                     if (activity.assets?.largeImage) {
                         const spotifyId = activity.assets.largeImage.split(':').pop();
                         if (spotifyId && spotifyId.length === 22) {
@@ -1324,31 +1294,18 @@ async function buildEnhancedEmbed(interaction, targetUser, member, presence, act
                             activityString += `\n🔗 **[Search on Spotify](https://open.spotify.com/search/${searchQuery})**`;
                         }
                     }
-
-                    if (activity.assets?.largeImage && !image) {
-                        const imageId = activity.assets.largeImage.split(':').pop();
-                        if (imageId) {
-                            image = `https://i.scdn.co/image/${imageId}`;
-                        }
-                    }
-                    if (!image) {
-                        image = 'https://i.imgur.com/6P1LrZz.png';
-                    }
                 } else {
                     activityString = `🎧 **Listening to:** ${activity.name}`;
                 }
                 break;
-
             case ActivityType.Watching:
                 activityString = `👀 **Observing:** ${activity.name}`;
                 break;
-
             case ActivityType.Competing:
                 activityString = `🏆 **Competing in:** ${activity.name}`;
                 break;
-
             case ActivityType.Custom:
-                fieldName = '💬 Bio Status';
+                fieldName = '💬 Status';
                 const emoji = activity.emoji
                     ? (activity.emoji.id
                         ? `<${activity.emoji.animated ? 'a' : ''}:${activity.emoji.name}:${activity.emoji.id}>`
@@ -1360,7 +1317,6 @@ async function buildEnhancedEmbed(interaction, targetUser, member, presence, act
                 if (state) parts.push(state);
                 activityString = parts.join(' ') || '💬 No data broadcast.';
                 break;
-
             default:
                 activityString = `🎯 **Operation:** ${activity.name}`;
         }
@@ -1372,19 +1328,11 @@ async function buildEnhancedEmbed(interaction, targetUser, member, presence, act
             }
 
             if (activity.party) {
-                if (activity.party.size) {
-                    activityString += `\n👥 **Party:** ${activity.party.size[0]}/${activity.party.size[1]}`;
-                }
-                if (activity.party.id) {
-                    activityString += `\n🆔 **Party ID:** ${activity.party.id}`;
-                }
+                if (activity.party.size) activityString += `\n👥 **Party:** ${activity.party.size[0]}/${activity.party.size[1]}`;
+                if (activity.party.id) activityString += `\n🆔 **Party ID:** ${activity.party.id}`;
             }
-            if (activity.match) {
-                activityString += `\n⚔️ **Match:** ${activity.match}`;
-            }
-            if (activity.buttons && activity.buttons.length > 0) {
-                activityString += `\n🔘 **Buttons:** ${activity.buttons.join(', ')}`;
-            }
+            if (activity.match) activityString += `\n⚔️ **Match:** ${activity.match}`;
+            if (activity.buttons && activity.buttons.length > 0) activityString += `\n🔘 **Buttons:** ${activity.buttons.join(', ')}`;
 
             if (activity.timestamps) {
                 const start = activity.timestamps.start ? activity.timestamps.start.getTime() : null;
@@ -1402,13 +1350,7 @@ async function buildEnhancedEmbed(interaction, targetUser, member, presence, act
                 }
             }
 
-            if (activity.secrets?.join) {
-                activityString += `\n🔑 **Joinable:** Yes (use button)`;
-            }
-        }
-
-        if (activity.applicationId && activity.assets?.largeImage && !image && activity.name !== 'Spotify') {
-            image = `https://cdn.discordapp.com/app-assets/${activity.applicationId}/${activity.assets.largeImage}.png`;
+            if (activity.secrets?.join) activityString += `\n🔑 **Joinable:** Yes`;
         }
 
         fields.push({
@@ -1416,14 +1358,6 @@ async function buildEnhancedEmbed(interaction, targetUser, member, presence, act
             value: activityString.slice(0, 1024) || 'No specific telemetry.',
             inline: false
         });
-    }
-
-    let footerText = `Live data synchronization active • Update #${updateCount}`;
-    if (filter !== 'all') {
-        footerText += ` • Filtered: 1 activity`;
-    }
-    if (viewMode === 'minimal') {
-        footerText += ' • Minimal view';
     }
 
     if (fields.length === 0) {
@@ -1434,9 +1368,30 @@ async function buildEnhancedEmbed(interaction, targetUser, member, presence, act
         });
     }
 
+    // Footer
+    let footerText = `Live data synchronization active • Update #${updateCount}`;
+    if (filter !== 'all') footerText += ` • Filtered: 1 activity`;
+    if (viewMode === 'minimal') footerText += ' • Minimal view';
+
+    // Thumbnail & Image
+    let thumbnail = targetUser.displayAvatarURL({ dynamic: true, size: 512 });
+    let image = null;
+    if (activitiesToShow.length > 0) {
+        const first = activitiesToShow[0];
+        if (first.name === 'Spotify' && first.assets?.largeImage) {
+            const imageId = first.assets.largeImage.split(':').pop();
+            if (imageId) image = `https://i.scdn.co/image/${imageId}`;
+        } else if (first.applicationId && first.assets?.largeImage) {
+            image = `https://cdn.discordapp.com/app-assets/${first.applicationId}/${first.assets.largeImage}.png`;
+        }
+    }
+    if (!image && activitiesToShow.some(a => a.name === 'Spotify')) {
+        image = 'https://i.imgur.com/6P1LrZz.png';
+    }
+
     const embedData = {
         title: `🛰️ Telemetry: ${targetUser.username}`,
-        description: description,
+        description: '', // All info is in fields
         thumbnail: thumbnail,
         image: image,
         fields: fields,
