@@ -114,12 +114,12 @@ module.exports = {
         const tempId = `${interaction.channelId}-${Date.now()}`;
         viewModes.set(tempId, 'full');
 
-        // Build initial embed – now using the new high‑tech embed builder
-        const { embed } = await buildHighTechEmbed(
+        // Build initial embed – now using the ultra‑cool embed builder
+        const { embed } = await buildUltraCoolEmbed(
             interaction, targetUser, member, presence, activities, bannerURL, accentColor, history, 'full', 'all', 0
         );
 
-        // --- Create dropdown ---
+        // --- Create dropdown (same as before) ---
         const selectMenu = new StringSelectMenuBuilder()
             .setCustomId('activity_select')
             .setPlaceholder('Filter activity...')
@@ -384,7 +384,7 @@ module.exports = {
                     } catch { /* ignore */ }
 
                     const currentView = viewModes.get(message.id) || 'full';
-                    const { embed: updatedEmbed } = await buildHighTechEmbed(
+                    const { embed: updatedEmbed } = await buildUltraCoolEmbed(
                         interaction, targetUser, freshMember, freshPresence, freshActivities,
                         freshBanner, freshAccent, activityHistory.get(targetUser.id), currentView, currentFilter, updates
                     );
@@ -447,7 +447,7 @@ module.exports = {
                 } catch { /* ignore */ }
 
                 const currentView = viewModes.get(message.id) || 'full';
-                const { embed: refreshedEmbed } = await buildHighTechEmbed(
+                const { embed: refreshedEmbed } = await buildUltraCoolEmbed(
                     interaction, targetUser, refreshedMember, refreshedPresence, refreshedActivities,
                     freshBanner, freshAccent, activityHistory.get(targetUser.id), currentView, currentFilter, updates
                 );
@@ -463,7 +463,7 @@ module.exports = {
                 await i.deferUpdate();
                 currentFilter = i.values[0];
                 const currentView = viewModes.get(message.id) || 'full';
-                const { embed: filteredEmbed } = await buildHighTechEmbed(
+                const { embed: filteredEmbed } = await buildUltraCoolEmbed(
                     interaction, targetUser, member, presence, activities,
                     bannerURL, accentColor, activityHistory.get(targetUser.id), currentView, currentFilter, updates
                 );
@@ -533,7 +533,7 @@ module.exports = {
             } else if (i.customId === 'share') {
                 await i.deferUpdate();
                 const currentView = viewModes.get(message.id) || 'full';
-                const { embed: shareEmbed } = await buildHighTechEmbed(
+                const { embed: shareEmbed } = await buildUltraCoolEmbed(
                     interaction, targetUser, member, presence, activities,
                     bannerURL, accentColor, activityHistory.get(targetUser.id), currentView, currentFilter, updates
                 );
@@ -586,8 +586,8 @@ module.exports = {
                     const otherBanner = await otherUser.fetch().then(u => u.bannerURL({ size: 1024 })).catch(() => null);
                     const otherAccent = otherUser.accentColor;
                     
-                    const embed1 = await buildHighTechEmbed(interaction, targetUser, member, presence, activities, bannerURL, accentColor, activityHistory.get(targetUser.id), 'full', currentFilter, updates);
-                    const embed2 = await buildHighTechEmbed(interaction, otherUser, otherMember, otherPresence || { status: 'offline' }, otherActivities, otherBanner, otherAccent, activityHistory.get(otherUser.id), 'full', 'all', 0);
+                    const embed1 = await buildUltraCoolEmbed(interaction, targetUser, member, presence, activities, bannerURL, accentColor, activityHistory.get(targetUser.id), 'full', currentFilter, updates);
+                    const embed2 = await buildUltraCoolEmbed(interaction, otherUser, otherMember, otherPresence || { status: 'offline' }, otherActivities, otherBanner, otherAccent, activityHistory.get(otherUser.id), 'full', 'all', 0);
                     
                     await modalSubmit.editReply({ 
                         content: `**Comparison: ${targetUser.username} vs ${otherUser.username}**`,
@@ -771,7 +771,7 @@ module.exports = {
                 } catch { /* ignore */ }
 
                 const currentView = viewModes.get(message.id) || 'full';
-                const { embed: newEmbed } = await buildHighTechEmbed(
+                const { embed: newEmbed } = await buildUltraCoolEmbed(
                     interaction, newTarget, newMember, newPresence, newActivities,
                     newBanner, newAccent, newHist, currentView, 'all', updates
                 );
@@ -782,7 +782,7 @@ module.exports = {
                 const current = viewModes.get(message.id) || 'full';
                 const newMode = current === 'full' ? 'minimal' : 'full';
                 viewModes.set(message.id, newMode);
-                const { embed: toggledEmbed } = await buildHighTechEmbed(
+                const { embed: toggledEmbed } = await buildUltraCoolEmbed(
                     interaction, targetUser, member, presence, activities,
                     bannerURL, accentColor, activityHistory.get(targetUser.id), newMode, currentFilter, updates
                 );
@@ -1162,8 +1162,8 @@ function buildTimeline(history) {
     return line;
 }
 
-// ========== HIGH‑TECH EMBED BUILDER ==========
-async function buildHighTechEmbed(interaction, targetUser, member, presence, activities, bannerURL, accentColor, history = [], viewMode = 'full', filter = 'all', updateCount = 0) {
+// ========== ULTRA‑COOL EMBED BUILDER ==========
+async function buildUltraCoolEmbed(interaction, targetUser, member, presence, activities, bannerURL, accentColor, history = [], viewMode = 'full', filter = 'all', updateCount = 0) {
     const { createCustomEmbed } = require('../../utils/embeds');
 
     const statusColors = {
@@ -1179,7 +1179,7 @@ async function buildHighTechEmbed(interaction, targetUser, member, presence, act
 
     const fields = [];
 
-    // 1. Profile Information
+    // 1. Profile – now with a fancy status bar
     const profileLines = [];
     const statusEmoji = presence.status === 'online' ? '🟢' : presence.status === 'idle' ? '🌙' : presence.status === 'dnd' ? '⛔' : '⚫';
     profileLines.push(`${statusEmoji} **Status:** ${presence.status.toUpperCase()}`);
@@ -1208,7 +1208,7 @@ async function buildHighTechEmbed(interaction, targetUser, member, presence, act
         inline: false
     });
 
-    // 2. Server Information (full mode only)
+    // 2. Server Info (full mode only)
     if (viewMode === 'full') {
         const serverLines = [];
         const highestRole = member.roles.highest.id !== interaction.guild.id ? member.roles.highest : null;
@@ -1224,7 +1224,7 @@ async function buildHighTechEmbed(interaction, targetUser, member, presence, act
         });
     }
 
-    // 3. Voice Information
+    // 3. Voice – enhanced with channel quality
     if (member.voice?.channel) {
         const voiceState = member.voice;
         const channelName = voiceState.channel.name;
@@ -1258,7 +1258,7 @@ async function buildHighTechEmbed(interaction, targetUser, member, presence, act
         });
     }
 
-    // 5. Current Activities
+    // 5. Current Activities – now with icons and better formatting
     let activitiesToShow = activities;
     if (filter !== 'all') {
         const index = parseInt(filter.replace('act_', ''), 10);
@@ -1368,12 +1368,12 @@ async function buildHighTechEmbed(interaction, targetUser, member, presence, act
         });
     }
 
-    // Footer
-    let footerText = `Live data synchronization active • Update #${updateCount}`;
+    // Footer with cool tech vibes
+    let footerText = `🛸 Live telemetry • Update #${updateCount}`;
     if (filter !== 'all') footerText += ` • Filtered: 1 activity`;
     if (viewMode === 'minimal') footerText += ' • Minimal view';
 
-    // Thumbnail & Image
+    // Thumbnail & Image – now with a default tech background if no image
     let thumbnail = targetUser.displayAvatarURL({ dynamic: true, size: 512 });
     let image = null;
     if (activitiesToShow.length > 0) {
@@ -1386,11 +1386,14 @@ async function buildHighTechEmbed(interaction, targetUser, member, presence, act
         }
     }
     if (!image && activitiesToShow.some(a => a.name === 'Spotify')) {
-        image = 'https://i.imgur.com/6P1LrZz.png';
+        image = 'https://i.imgur.com/6P1LrZz.png'; // music note
+    }
+    if (!image) {
+        image = 'https://i.imgur.com/JiL0kPc.png'; // cool tech background (you can replace with your own)
     }
 
     const embedData = {
-        title: `🛰️ Telemetry: ${targetUser.username}`,
+        title: `🛰️ Telemetry: ${targetUser.username} ${statusEmoji}`,
         description: '', // All info is in fields
         thumbnail: thumbnail,
         image: image,
