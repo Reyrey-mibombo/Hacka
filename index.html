@@ -1,1965 +1,493 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STRATA - The Ultimate Discord Staff Bot</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
-
-        :root {
-            --bg-dark: #09090b;
-            --bg-card: rgba(255, 255, 255, 0.03);
-            --border: rgba(255, 255, 255, 0.1);
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --primary: #f472b6;
-            /* Pink accent */
-            --secondary: #8b5cf6;
-            /* Purple accent */
-            --tertiary: #3b82f6;
-            /* Blue accent */
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            scroll-behavior: smooth;
-        }
-
-        body {
-            font-family: 'Outfit', sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            overflow-x: hidden;
-            line-height: 1.5;
-        }
-
-        /* Ambient Glow Background */
-        .ambient-bg {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: -1;
-            overflow: hidden;
-            background: radial-gradient(circle at var(--mouseX, 50%) var(--mouseY, -20%), rgba(244, 114, 182, 0.15), transparent 40%),
-                radial-gradient(circle at calc(100% - var(--mouseX, 120%)) calc(100% - var(--mouseY, 80%)), rgba(139, 92, 246, 0.15), transparent 40%),
-                radial-gradient(circle at -20% 50%, rgba(59, 130, 246, 0.1), transparent 50%);
-            animation: breathe 10s ease-in-out infinite alternate;
-            transition: background 0.5s ease-out;
-        }
-
-        @keyframes breathe {
-            0% {
-                opacity: 0.8;
-                transform: scale(1);
-            }
-
-            100% {
-                opacity: 1;
-                transform: scale(1.05);
-            }
-        }
-
-        /* Navigation */
-        nav {
-            position: fixed;
-            top: 0;
-            width: 100%;
-            padding: 1.5rem 5%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            backdrop-filter: blur(12px);
-            background: rgba(9, 9, 11, 0.7);
-            border-bottom: 1px solid var(--border);
-            z-index: 100;
-            transition: all 0.3s ease;
-        }
-
-        .logo {
-            font-size: 1.5rem;
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            text-decoration: none;
-        }
-
-        .logo span {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 2rem;
-            list-style: none;
-        }
-
-        .nav-links a {
-            color: var(--text-muted);
-            text-decoration: none;
-            font-weight: 600;
-            transition: color 0.3s ease;
-            position: relative;
-        }
-
-        .nav-links a::after {
-            content: '';
-            position: absolute;
-            width: 0;
-            height: 2px;
-            bottom: -4px;
-            left: 0;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            transition: width 0.3s ease;
-        }
-
-        .nav-links a:hover {
-            color: var(--text-main);
-        }
-
-        .nav-links a:hover::after {
-            width: 100%;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0.75rem 1.5rem;
-            border-radius: 9999px;
-            font-weight: 600;
-            text-decoration: none;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border: none;
-            cursor: pointer;
-            gap: 0.5rem;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            box-shadow: 0 4px 20px rgba(244, 114, 182, 0.3);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(244, 114, 182, 0.5);
-            filter: brightness(1.1);
-        }
-
-        .btn-outline {
-            background: rgba(255, 255, 255, 0.05);
-            color: white;
-            border: 1px solid var(--border);
-            backdrop-filter: blur(10px);
-        }
-
-        .btn-outline:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
-        }
-
-        /* Hero Section */
-        .hero {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            padding: 8rem 5% 4rem;
-            position: relative;
-        }
-
-        .badge {
-            background: rgba(244, 114, 182, 0.1);
-            color: var(--primary);
-            border: 1px solid rgba(244, 114, 182, 0.2);
-            padding: 0.5rem 1.25rem;
-            border-radius: 9999px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            margin-bottom: 2rem;
-            animation: slideDown 0.8s ease-out;
-        }
-
-        h1 {
-            font-size: clamp(3rem, 6vw, 5.5rem);
-            font-weight: 800;
-            line-height: 1.1;
-            margin-bottom: 1.5rem;
-            max-width: 900px;
-            letter-spacing: -0.02em;
-            animation: slideUp 1s ease-out 0.2s backwards;
-        }
-
-        .text-gradient {
-            background: linear-gradient(to right, #f8fafc, #94a3b8);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .text-gradient-accent {
-            background: linear-gradient(to right, var(--primary), var(--secondary), var(--tertiary));
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-size: 200% auto;
-            animation: gradientShift 5s linear infinite;
-        }
-
-        .hero p {
-            font-size: clamp(1.1rem, 2vw, 1.25rem);
-            color: var(--text-muted);
-            max-width: 650px;
-            margin-bottom: 3rem;
-            animation: slideUp 1s ease-out 0.4s backwards;
-        }
-
-        .hero-ctas {
-            display: flex;
-            gap: 1rem;
-            animation: slideUp 1s ease-out 0.6s backwards;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        /* Features Dashboard Preview */
-        .dashboard-preview {
-            margin-top: 4rem;
-            width: 100%;
-            max-width: 1000px;
-            height: 400px;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
-            border: 1px solid var(--border);
-            border-radius: 24px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            position: relative;
-            overflow: hidden;
-            animation: slideUp 1.2s ease-out 0.8s backwards;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .dashboard-preview::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 40px;
-            background: rgba(255, 255, 255, 0.02);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            padding-left: 1.5rem;
-        }
-
-        .mock-dots {
-            position: absolute;
-            top: 15px;
-            left: 20px;
-            display: flex;
-            gap: 8px;
-        }
-
-        .mock-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #ff5f56;
-        }
-
-        .mock-dot:nth-child(2) {
-            background: #ffbd2e;
-        }
-
-        .mock-dot:nth-child(3) {
-            background: #27c93f;
-        }
-
-        .discord-mockup {
-            font-family: 'Inter', sans-serif;
-            text-align: left;
-            width: 80%;
-            background: #313338;
-            border-radius: 8px;
-            padding: 1rem;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        }
-
-        .discord-msg {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .discord-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            flex-shrink: 0;
-        }
-
-        .discord-content {
-            color: #dbdee1;
-            font-size: 0.95rem;
-        }
-
-        .discord-name {
-            color: #fff;
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-
-        .discord-embed {
-            margin-top: 0.5rem;
-            border-left: 4px solid var(--primary);
-            background: #2b2d31;
-            padding: 1rem;
-            border-radius: 4px;
-        }
-
-        /* Features Grid */
-        .section {
-            padding: 6rem 5%;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .section-header {
-            text-align: center;
-            margin-bottom: 4rem;
-        }
-
-        .section-title {
-            font-size: clamp(2rem, 4vw, 3rem);
-            margin-bottom: 1rem;
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-        }
-
-        .feature-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 2.5rem 2rem;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-5px);
-            border-color: rgba(244, 114, 182, 0.3);
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .feature-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle at top right, rgba(244, 114, 182, 0.1), transparent 50%);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            pointer-events: none;
-        }
-
-        .feature-card:hover::before {
-            opacity: 1;
-        }
-
-        .icon-wrapper {
-            width: 50px;
-            height: 50px;
-            border-radius: 12px;
-            background: rgba(244, 114, 182, 0.1);
-            color: var(--primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .feature-card h3 {
-            font-size: 1.25rem;
-            margin-bottom: 1rem;
-            color: var(--text-main);
-        }
-
-        .feature-card p {
-            color: var(--text-muted);
-            font-size: 0.95rem;
-        }
-
-        /* Promo Requirements List */
-        .req-list {
-            list-style: none;
-            margin-top: 1rem;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.5rem;
-        }
-
-        .req-list li {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .req-list li::before {
-            content: '✓';
-            color: var(--primary);
-            font-weight: bold;
-        }
-
-        /* Pricing Tiers */
-        .pricing-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            align-items: start;
-        }
-
-        .price-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 24px;
-            padding: 3rem 2rem;
-            text-align: center;
-            position: relative;
-            transition: all 0.3s;
-        }
-
-        .price-card:hover {
-            transform: scale(1.02);
-            border-color: rgba(255, 255, 255, 0.2);
-        }
-
-        .price-card.popular {
-            border-color: var(--primary);
-            background: linear-gradient(180deg, rgba(244, 114, 182, 0.05) 0%, rgba(0, 0, 0, 0) 100%);
-            box-shadow: 0 10px 40px rgba(244, 114, 182, 0.1);
-        }
-
-        .popular-badge {
-            position: absolute;
-            top: -12px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            padding: 0.25rem 1rem;
-            border-radius: 9999px;
-            font-size: 0.8rem;
-            font-weight: bold;
-        }
-
-        .tier-name {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
-
-        .tier-desc {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            margin-bottom: 2rem;
-        }
-
-        .tier-price {
-            font-size: 3rem;
-            font-weight: 800;
-            margin-bottom: 2rem;
-        }
-
-        .tier-price span {
-            font-size: 1rem;
-            color: var(--text-muted);
-            font-weight: normal;
-        }
-
-        .feature-list {
-            list-style: none;
-            text-align: left;
-            margin-bottom: 2.5rem;
-        }
-
-        .feature-list li {
-            padding: 0.75rem 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            color: #cbd5e1;
-            font-size: 0.95rem;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .feature-list li.pro {
-            color: var(--primary);
-            font-weight: 600;
-        }
-
-        .feature-list li i {
-            color: var(--tertiary);
-        }
-
-        /* Footer */
-        footer {
-            border-top: 1px solid var(--border);
-            padding: 4rem 5% 2rem;
-            text-align: center;
-            color: var(--text-muted);
-        }
-
-        .footer-logo {
-            font-size: 1.5rem;
-            font-weight: 800;
-            margin-bottom: 1rem;
-            display: inline-block;
-        }
-
-        /* Animations */
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes typing {
-            0% {
-                content: ".";
-            }
-
-            33% {
-                content: "..";
-            }
-
-            66% {
-                content: "...";
-            }
-
-            100% {
-                content: ".";
-            }
-        }
-
-        .discord-mockup.loading .discord-embed {
-            display: none;
-        }
-
-        .discord-mockup.loading .discord-msg::after {
-            content: "BOT is typing.";
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            font-style: italic;
-            position: absolute;
-            bottom: 10px;
-            left: 60px;
-            animation: typing 1.5s infinite;
-        }
-
-        .reveal {
-            opacity: 0;
-            transform: translateY(40px);
-            transition: all 0.8s cubic-bezier(0.5, 0, 0, 1);
-        }
-
-        .reveal.active {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        @keyframes gradientShift {
-            0% {
-                background-position: 0% center;
-            }
-
-            100% {
-                background-position: 200% center;
-            }
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .nav-links {
-                display: none;
-            }
-
-            .hero {
-                padding-top: 6rem;
-            }
-
-            .section {
-                padding: 4rem 5%;
-            }
-
-            .dashboard-preview {
-                height: 300px;
-            }
-
-            h1 {
-                font-size: 2.5rem;
-            }
-
-            .req-list {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* Reviews Section */
-        .review-form-container {
-            max-width: 600px;
-            margin: 0 auto 3rem;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 2rem;
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-            text-align: left;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: var(--text-muted);
-            font-size: 0.9rem;
-        }
-
-        .form-control {
-            width: 100%;
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid var(--border);
-            color: var(--text-main);
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            font-family: inherit;
-            transition: border-color 0.3s;
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-
-        .star-rating {
-            display: flex;
-            flex-direction: row-reverse;
-            justify-content: flex-end;
-            gap: 0.25rem;
-        }
-
-        .star-rating input {
-            display: none;
-        }
-
-        .star-rating label {
-            font-size: 2rem;
-            color: var(--text-muted);
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-
-        .star-rating label:hover,
-        .star-rating label:hover~label,
-        .star-rating input:checked~label,
-        .star-rating input:checked+label {
-            color: #fbbf24;
-        }
-
-        .reviews-list {
-            max-width: 800px;
-            margin: 0 auto;
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-            text-align: left;
-        }
-
-        .review-item {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.5rem;
-            animation: slideUp 0.5s ease-out;
-            position: relative;
-        }
-
-        .review-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.75rem;
-        }
-
-        .review-author {
-            font-weight: 600;
-            color: var(--text-main);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .review-author-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 0.8rem;
-        }
-
-        .review-stars {
-            color: #fbbf24;
-            letter-spacing: 2px;
-        }
-
-        .review-text {
-            color: var(--text-muted);
-            font-size: 0.95rem;
-            line-height: 1.6;
-        }
-
-        .no-reviews {
-            text-align: center;
-            color: var(--text-muted);
-            font-style: italic;
-            padding: 2rem;
-            border: 1px dashed var(--border);
-            border-radius: 12px;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STRATA — The Ultimate Discord Staff Management Bot</title>
+  <meta name="description" content="Manage tickets, automate staff promotions, track shifts, and run your community with STRATA — the most powerful Discord staff bot with Free, Premium, and Enterprise tiers." />
+  <link rel="icon" href="https://cdn.discordapp.com/emojis/1234567890.webp" onerror="this.href='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>'" />
+  <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
-    <div class="ambient-bg"></div>
 
-    <nav id="navbar">
-        <a href="#" class="logo">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="url(#paint0_linear)" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round" />
-                <path d="M2 17L12 22L22 17" stroke="url(#paint1_linear)" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round" />
-                <path d="M2 12L12 17L22 12" stroke="url(#paint2_linear)" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round" />
-                <defs>
-                    <linearGradient id="paint0_linear" x1="2" y1="7" x2="22" y2="7" gradientUnits="userSpaceOnUse">
-                        <stop stop-color="#F472B6" />
-                        <stop offset="1" stop-color="#8B5CF6" />
-                    </linearGradient>
-                    <linearGradient id="paint1_linear" x1="2" y1="19.5" x2="22" y2="19.5"
-                        gradientUnits="userSpaceOnUse">
-                        <stop stop-color="#F472B6" />
-                        <stop offset="1" stop-color="#8B5CF6" />
-                    </linearGradient>
-                    <linearGradient id="paint2_linear" x1="2" y1="14.5" x2="22" y2="14.5"
-                        gradientUnits="userSpaceOnUse">
-                        <stop stop-color="#F472B6" />
-                        <stop offset="1" stop-color="#8B5CF6" />
-                    </linearGradient>
-                </defs>
-            </svg>
-            <span>STRATA</span>
-        </a>
-        <ul class="nav-links">
-            <li><a href="#features">Features</a></li>
-            <li><a href="#auto-promo">Auto-Promo</a></li>
-            <li><a href="#tiers">Tiers</a></li>
-            <li><a href="#reviews">Reviews</a></li>
-        </ul>
-        <a href="https://discord.gg/smNwftEhKe" target="_blank" class="btn btn-primary">Join Discord Server</a>
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<!-- ── NAV ── -->
+<nav>
+  <a class="nav-logo" href="#">
+    <span style="font-size:1.5rem">🤖</span>
+    STRATA
+    <span class="logo-badge">BOT</span>
+  </a>
+  <div class="nav-links">
+    <a href="#" data-scroll="features">Features</a>
+    <a href="#" data-scroll="auto-promo">Auto-Promo</a>
+    <a href="#" data-scroll="commands">Commands</a>
+    <a href="#" data-scroll="tiers">Pricing</a>
+    <a href="https://discord.gg/smNwftEhKe" target="_blank">Support</a>
+  </div>
+  <div class="nav-actions">
+    <div id="navUser" style="display:none;align-items:center;gap:10px">
+      <span id="navUserName" style="font-size:.87rem;font-weight:600;color:var(--text2)"></span>
+      <button class="btn btn-secondary" onclick="showDashboard()">Dashboard</button>
+      <button class="btn btn-outline" onclick="logout()">Logout</button>
+    </div>
+    <button class="btn btn-discord" id="navLoginBtn" onclick="loginWithDiscord()">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.101 18.08.114 18.1.134 18.114a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+      Login with Discord
+    </button>
+    <a href="https://discord.com/api/oauth2/authorize?client_id=1234567890&permissions=8&scope=bot%20applications.commands" target="_blank" class="btn btn-primary">Add to Server</a>
+  </div>
+</nav>
+
+<!-- ════════════════════════════════ LANDING PAGE ════════════════════════════════ -->
+<div id="landingPage">
+
+<!-- ── HERO ── -->
+<section class="hero" style="max-width:none;padding-top:140px">
+  <div class="particles" id="particles"></div>
+  <div class="hero-badge">🚀 271 Slash Commands Across 8 Versions</div>
+  <h1>The <span>Ultimate Discord</span><br />Staff Management Bot</h1>
+  <p>Automate promotions, track shifts, manage tickets, and empower your staff team — all with beautiful embeds and real data.</p>
+  <div class="hero-actions">
+    <a href="https://discord.com/api/oauth2/authorize?client_id=1234567890&permissions=8&scope=bot%20applications.commands" target="_blank" class="btn btn-primary btn-lg">
+      🤖 Add to Server — Free
+    </a>
+    <button class="btn btn-secondary btn-lg" onclick="loginWithDiscord()">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.101 18.08.114 18.1.134 18.114a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.030z"/></svg>
+      Staff Login
+    </button>
+    <a href="https://discord.gg/smNwftEhKe" target="_blank" class="btn btn-outline btn-lg">💬 Join Community</a>
+  </div>
+  <div class="stats-bar">
+    <div class="stat-item"><div class="num" id="stat-servers">0</div><div class="label">Active Servers</div></div>
+    <div class="stat-item"><div class="num" id="stat-staff">0</div><div class="label">Staff Tracked</div></div>
+    <div class="stat-item"><div class="num" id="stat-tickets">0</div><div class="label">Tickets Handled</div></div>
+    <div class="stat-item"><div class="num" id="stat-commands">0</div><div class="label">Slash Commands</div></div>
+  </div>
+</section>
+
+<!-- ── FEATURES ── -->
+<section id="features">
+  <div class="section-label">Features</div>
+  <h2 class="section-title">Everything you need,<br />all in one bot</h2>
+  <p class="section-sub">From free shift tracking to enterprise AI forecasting — STRATA grows with your server.</p>
+  <div class="features-grid">
+    <div class="card feature-card">
+      <div class="card-icon">🎟️</div>
+      <h3>Advanced Ticket System</h3>
+      <p>Fully customizable ticket panels with staff claim, feedback forms, DM routing, and transcript logs.</p>
+    </div>
+    <div class="card feature-card">
+      <div class="card-icon">⏱️</div>
+      <h3>Shift Tracking</h3>
+      <p>Staff log shifts with /shift_start and /shift_end. Points awarded per 5 minutes. Streak system with trophies.</p>
+    </div>
+    <div class="card feature-card">
+      <div class="card-icon">🚀</div>
+      <h3>Auto-Promotion Engine</h3>
+      <p>Checks 9 real requirements every 15 minutes. Owner gets a DM with Approve/Interview/Deny buttons.</p>
+    </div>
+    <div class="card feature-card">
+      <div class="card-icon">📊</div>
+      <h3>Real Analytics</h3>
+      <p>Live dashboards with engagement rates, burnout detection, weekly/monthly reports, and growth tracking.</p>
+    </div>
+    <div class="card feature-card">
+      <div class="card-icon">🛡️</div>
+      <h3>Advanced Moderation</h3>
+      <p>Ban, mute (timeout), and audit logs with real Discord API. DM notifications, activity logging, and mod channel posts.</p>
+    </div>
+    <div class="card feature-card">
+      <div class="card-icon">🔮</div>
+      <h3>AI Forecasting</h3>
+      <p>Linear regression on real activity data predicts 30-day growth trends. No fake numbers — only real DB data.</p>
+    </div>
+    <div class="card feature-card">
+      <div class="card-icon">🏅</div>
+      <h3>Elite Badge System</h3>
+      <p>Grant, view, and list elite achievement badges. Saved to DB, DMs the recipient, and showcases in their profile.</p>
+    </div>
+    <div class="card feature-card">
+      <div class="card-icon">💎</div>
+      <h3>Interactive Dashboards</h3>
+      <p>3-tab live dashboards for Overview, Staff, and Moderation — all with real-time MongoDB data and button navigation.</p>
+    </div>
+    <div class="card feature-card">
+      <div class="card-icon">🌡️</div>
+      <h3>Activity Heatmaps</h3>
+      <p>Visual ASCII heatmaps showing real 24-hour and day-of-week activity patterns from your server's data.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── AUTO PROMO ── -->
+<section id="auto-promo" style="background:var(--bg2);border-radius:24px;padding:60px 48px;max-width:1200px;margin:0 auto">
+  <div class="section-label">Auto-Promotion</div>
+  <h2 class="section-title">Set it. Forget it.<br />Staff get promoted automatically.</h2>
+  <p class="section-sub">Our 9-point evaluation engine checks every staff member every 15 minutes. When someone's ready — you decide with one click.</p>
+
+  <div class="rank-ladder" style="margin-top:40px;justify-content:center">
+    <div class="rank-node"><div class="bubble">👤</div><span>MEMBER</span></div>
+    <div class="rank-arrow">→</div>
+    <div class="rank-node"><div class="bubble">🔰</div><span>TRIAL</span></div>
+    <div class="rank-arrow">→</div>
+    <div class="rank-node"><div class="bubble">⭐</div><span>STAFF</span></div>
+    <div class="rank-arrow">→</div>
+    <div class="rank-node"><div class="bubble">🌟</div><span>SENIOR</span></div>
+    <div class="rank-arrow">→</div>
+    <div class="rank-node"><div class="bubble">💎</div><span>MANAGER</span></div>
+    <div class="rank-arrow">→</div>
+    <div class="rank-node"><div class="bubble" style="border-color:var(--enterprise);box-shadow:0 0 20px rgba(241,196,15,.3)">👑</div><span>ADMIN</span></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-top:40px">
+    <div class="card" style="text-align:center"><div style="font-size:1.5rem;margin-bottom:8px">⭐</div><h3 style="margin-bottom:4px">Points</h3><p>Earned from shifts, commands, and bonuses</p></div>
+    <div class="card" style="text-align:center"><div style="font-size:1.5rem;margin-bottom:8px">🔄</div><h3 style="margin-bottom:4px">Shifts</h3><p>Number of completed shifts</p></div>
+    <div class="card" style="text-align:center"><div style="font-size:1.5rem;margin-bottom:8px">📈</div><h3 style="margin-bottom:4px">Consistency</h3><p>Activity rate over 7 days</p></div>
+    <div class="card" style="text-align:center"><div style="font-size:1.5rem;margin-bottom:8px">⚠️</div><h3 style="margin-bottom:4px">Warnings</h3><p>Must be below max for rank</p></div>
+    <div class="card" style="text-align:center"><div style="font-size:1.5rem;margin-bottom:8px">⏱️</div><h3 style="margin-bottom:4px">Shift Hours</h3><p>Total hours worked on duty</p></div>
+  </div>
+
+  <div style="text-align:center;margin-top:36px">
+    <button class="btn btn-primary btn-lg" onclick="loginWithDiscord()">🔎 Check Your Promotion Status</button>
+  </div>
+</section>
+
+<!-- ── COMMANDS ── -->
+<section id="commands">
+  <div class="section-label">Commands</div>
+  <h2 class="section-title">271 Slash Commands</h2>
+  <p class="section-sub">Browse all commands across Free (v1-v2), Premium (v3-v5), and Enterprise (v6-v8) tiers.</p>
+
+  <div class="cmd-search" style="margin-top:32px">
+    <input type="text" id="cmdSearch" placeholder="🔍 Search commands..." />
+    <div class="cmd-filters">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="v1">Free v1</button>
+      <button class="filter-btn" data-filter="v2">Free v2</button>
+      <button class="filter-btn" data-filter="v3">Premium v3</button>
+      <button class="filter-btn" data-filter="v4">Premium v4</button>
+      <button class="filter-btn" data-filter="v5">Premium v5</button>
+      <button class="filter-btn" data-filter="v6">Enterprise v6</button>
+      <button class="filter-btn" data-filter="v7">Enterprise v7</button>
+      <button class="filter-btn" data-filter="v8">Enterprise v8</button>
+    </div>
+  </div>
+
+  <div class="cmd-grid" id="cmdGrid">
+    <div style="grid-column:1/-1;text-align:center;color:var(--text3);padding:40px">Loading commands...</div>
+  </div>
+</section>
+
+<!-- ── TIERS ── -->
+<section id="tiers">
+  <div class="section-label">Pricing</div>
+  <h2 class="section-title">Choose your tier</h2>
+  <p class="section-sub">Start free, upgrade when you're ready. All payments are secure via Stripe.</p>
+
+  <div style="display:flex;align-items:center;gap:16px;margin:32px 0 20px;flex-wrap:wrap">
+    <label style="color:var(--text2);font-size:.9rem">Server size estimator:</label>
+    <input type="range" min="5" max="200" value="30" oninput="updateSlider(this.value)" style="flex:1;max-width:300px;accent-color:var(--accent)" />
+    <span id="sliderRec" style="font-weight:700;color:var(--accent)">Recommendation: Premium</span>
+  </div>
+
+  <div class="tiers-grid">
+    <!-- FREE -->
+    <div class="tier-card">
+      <div class="tier-badge badge-free">🆓 FREE</div>
+      <div style="font-size:1rem;color:var(--text2)">v1 + v2 Commands</div>
+      <div class="tier-price">$0 <span>/ forever</span></div>
+      <ul class="tier-features">
+        <li><span class="check">✓</span> Shift tracking & profiles</li>
+        <li><span class="check">✓</span> Points & leaderboard</li>
+        <li><span class="check">✓</span> Warn, promote, demote</li>
+        <li><span class="check">✓</span> Ticket system</li>
+        <li><span class="check">✓</span> Activity heatmap</li>
+        <li><span class="check">✓</span> Weekly/monthly reports</li>
+        <li><span class="check">✓</span> Server status dashboard</li>
+        <li><span class="cross">✗</span> Advanced moderation</li>
+        <li><span class="cross">✗</span> Auto-promotion engine</li>
+      </ul>
+      <a href="https://discord.gg/smNwftEhKe" target="_blank" class="btn btn-outline" style="width:100%;justify-content:center">Add to Server Free</a>
+    </div>
+    <!-- PREMIUM -->
+    <div class="tier-card popular">
+      <div class="tier-badge badge-premium">💎 PREMIUM</div>
+      <div style="font-size:1rem;color:var(--text2)">v3 + v4 + v5 Commands</div>
+      <div class="tier-price">$9.99 <span>/ mo</span></div>
+      <ul class="tier-features">
+        <li><span class="check">✓</span> Everything in Free</li>
+        <li><span class="check">✓</span> Auto-promotion (9 checks)</li>
+        <li><span class="check">✓</span> Advanced moderation suite</li>
+        <li><span class="check">✓</span> Monthly & achievement analytics</li>
+        <li><span class="check">✓</span> Audit logs with pagination</li>
+        <li><span class="check">✓</span> Growth tracking & ROI</li>
+        <li><span class="check">✓</span> Performance scoring</li>
+        <li><span class="check">✓</span> Priority support</li>
+        <li><span class="cross">✗</span> AI forecasting</li>
+      </ul>
+      <a href="https://discord.gg/smNwftEhKe" target="_blank" class="btn btn-premium" style="width:100%;justify-content:center">💎 Buy Premium</a>
+    </div>
+    <!-- ENTERPRISE -->
+    <div class="tier-card">
+      <div class="tier-badge badge-enterprise">🌟 ENTERPRISE</div>
+      <div style="font-size:1rem;color:var(--text2)">v6 + v7 + v8 Commands</div>
+      <div class="tier-price">$24.99 <span>/ mo</span></div>
+      <ul class="tier-features">
+        <li><span class="check">✓</span> Everything in Premium</li>
+        <li><span class="check">✓</span> AI growth forecasting</li>
+        <li><span class="check">✓</span> Zenith interactive dashboard</li>
+        <li><span class="check">✓</span> Elite badge grant system</li>
+        <li><span class="check">✓</span> Server health score</li>
+        <li><span class="check">✓</span> Smart spike alerts</li>
+        <li><span class="check">✓</span> Automation pulse</li>
+        <li><span class="check">✓</span> Custom branding</li>
+        <li><span class="check">✓</span> Zenith passport profiles</li>
+      </ul>
+      <a href="https://discord.gg/smNwftEhKe" target="_blank" class="btn btn-secondary" style="width:100%;justify-content:center;border-color:var(--enterprise);color:var(--enterprise)">🌟 Buy Enterprise</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── REVIEWS ── -->
+<section id="reviews" style="background:var(--bg2);border-radius:24px;padding:60px 48px;max-width:1200px;margin:0 auto 60px">
+  <div class="section-label">Community</div>
+  <h2 class="section-title">Loved by server owners</h2>
+  <div class="reviews-grid">
+    <div class="review-card">
+      <div class="review-stars">★★★★★</div>
+      <div class="review-txt">"STRATA completely replaced 3 bots we were using. The auto-promotion system alone saves us hours every week."</div>
+      <div class="review-author">
+        <div class="review-avatar">A</div>
+        <div><div class="review-name">Alex</div><div class="review-server">Community Server • 2.4K members</div></div>
+      </div>
+    </div>
+    <div class="review-card">
+      <div class="review-stars">★★★★★</div>
+      <div class="review-txt">"The shift tracking and burnout detection is incredible. My mods actually get recognized for their work now."</div>
+      <div class="review-author">
+        <div class="review-avatar" style="background:var(--premium)">M</div>
+        <div><div class="review-name">Maria</div><div class="review-server">Gaming Hub • 8.1K members</div></div>
+      </div>
+    </div>
+    <div class="review-card">
+      <div class="review-stars">★★★★★</div>
+      <div class="review-txt">"Enterprise tier is insane. The AI forecasting predicted our server growth spike before it happened."</div>
+      <div class="review-author">
+        <div class="review-avatar" style="background:var(--enterprise);color:#000">J</div>
+        <div><div class="review-name">Jake</div><div class="review-server">Tech Community • 15K members</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div style="font-size:1.1rem;font-weight:800;margin-bottom:12px">🤖 STRATA</div>
+  <div style="display:flex;gap:24px;justify-content:center;flex-wrap:wrap;margin-bottom:16px">
+    <a href="https://discord.gg/smNwftEhKe" target="_blank">Discord</a>
+    <a href="https://github.com/Reyrey-mibombo/uwu-chan-saas" target="_blank">GitHub</a>
+    <a href="#" data-scroll="commands">Commands</a>
+    <a href="#" data-scroll="tiers">Pricing</a>
+  </div>
+  <div>© 2026 Reyrey-mibombo · Released under MIT License · Built with Discord.js & MongoDB</div>
+</footer>
+
+</div><!-- /landingPage -->
+
+<!-- ════════════════════════════════ DASHBOARD ════════════════════════════════ -->
+<div class="dashboard" id="dashboard">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-guild">
+      <div class="guild-avatar" id="sideGuildAvatar">S</div>
+      <div class="guild-name" id="sideGuildName">My Server</div>
+      <div class="guild-tier" id="sideGuildTier">Free Tier</div>
+    </div>
+    <nav class="sidebar-menu">
+      <div class="sidebar-section">Overview</div>
+      <div class="sidebar-item active" data-panel="home"><span class="icon">🏠</span> Dashboard</div>
+      <div class="sidebar-section">Staff System</div>
+      <div class="sidebar-item" data-panel="staff"><span class="icon">👥</span> Staff List</div>
+      <div class="sidebar-item" data-panel="promo"><span class="icon">🚀</span> Promotion Tracker</div>
+      <div class="sidebar-item" data-panel="shifts"><span class="icon">⏱️</span> Shift Log</div>
+      <div class="sidebar-item" data-panel="achievements"><span class="icon">🏅</span> Achievements</div>
+      <div class="sidebar-section">Analytics</div>
+      <div class="sidebar-item" data-panel="analytics"><span class="icon">📊</span> Analytics</div>
+      <div class="sidebar-item" data-panel="alerts"><span class="icon">🚨</span> Smart Alerts</div>
+      <div class="sidebar-section">Settings</div>
+      <div class="sidebar-item" onclick="logout()"><span class="icon">🚪</span> Back to Home</div>
     </nav>
+  </aside>
 
-    <section class="hero">
-        <div class="badge">🚀 v8.0 Enterprise Now Available</div>
-        <h1 class="text-gradient">The Ultimate Discord <br><span class="text-gradient-accent">Staff Management</span>
-            Bot</h1>
-        <p>A comprehensive Discord bot designed for communities. Manage tickets, applications, and automate staff
-            promotions with our multi-version premium system.</p>
+  <!-- Main -->
+  <main class="dash-main">
 
-        <div class="hero-ctas">
-            <a href="https://discord.gg/smNwftEhKe" target="_blank" class="btn btn-primary">
-                Join our Server to Buy
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                    <polyline points="12 5 19 12 12 19"></polyline>
-                </svg>
-            </a>
+    <!-- Panel: Home -->
+    <div class="dash-panel" id="panel-home">
+      <div class="dash-greeting" id="dashGreet">Welcome back! 👋</div>
+      <div class="dash-sub">Here's your staff overview for today.</div>
 
+      <div class="dash-stats">
+        <div class="dash-stat">
+          <div class="ds-label">Your Points</div>
+          <div class="ds-value" id="dashPts" style="color:var(--accent)">—</div>
+          <div class="ds-change ds-up">↑ 42 this week</div>
+          <div class="prog-bar-wrap" style="margin-top:10px"><div class="prog-bar-fill" id="barPts" style="width:0%"></div></div>
         </div>
-
-        <div class="dashboard-preview">
-            <div class="mock-dots">
-                <div class="mock-dot"></div>
-                <div class="mock-dot"></div>
-                <div class="mock-dot"></div>
-            </div>
-
-            <div class="discord-mockup">
-                <div class="discord-msg">
-                    <div class="discord-avatar"></div>
-                    <div>
-                        <div class="discord-name">STRATA <span
-                                style="background: #5865F2; font-size: 0.7rem; padding: 2px 4px; border-radius: 4px; margin-left: 5px;">BOT</span>
-                        </div>
-                        <div class="discord-embed">
-                            <strong style="color: white; font-size: 1.1rem; display: block; margin-bottom: 5px;">🌟
-                                Staff Application Review</strong>
-                            <p style="margin-bottom: 10px;">User **@Alex** has submitted a new Helper
-                                Application.</p>
-                            <div style="background: #1e1f22; padding: 8px; border-radius: 4px; font-family: monospace;">
-                                Status: Pending<br>
-                                Shift Hours avg: 4h/day
-                            </div>
-                            <div style="margin-top: 10px; display: flex; gap: 8px;">
-                                <button
-                                    style="background: #248046; border: none; color: white; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: 500;"
-                                    onclick="alert('Application Accepted!')">Accept</button>
-                                <button
-                                    style="background: #da373c; border: none; color: white; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: 500;"
-                                    onclick="alert('Application Denied!')">Deny</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="dash-stat">
+          <div class="ds-label">Current Rank</div>
+          <div class="ds-value" id="dashRank" style="font-size:1.4rem">—</div>
+          <div class="ds-change" style="color:var(--text3)">4 staff above you</div>
         </div>
-    </section>
-
-    <!-- NEW LIVE STATS SECTION -->
-    <section id="live-stats" class="section reveal"
-        style="background: rgba(255,255,255,0.01); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
-        <div class="section-header">
-            <h2 class="section-title text-gradient">Live Platform Dashboard</h2>
-
+        <div class="dash-stat">
+          <div class="ds-label">Shifts Done</div>
+          <div class="ds-value" id="dashShifts" style="color:var(--green)">—</div>
+          <div class="prog-bar-wrap" style="margin-top:10px"><div class="prog-bar-fill" id="barShifts" style="width:0%;background:linear-gradient(90deg,var(--green),var(--zenith))"></div></div>
         </div>
-
-        <div class="features-grid"
-            style="grid-template-columns: repeat(3, 1fr); gap: 1rem; max-width: 1000px; margin: 0 auto;">
-            <div class="feature-card reveal" style="text-align: center; padding: 2rem; transition-delay: 0.1s;">
-                <h3
-                    style="color: var(--text-muted); font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem;">
-                    Total Servers</h3>
-                <div id="stat-servers" style="font-size: 3rem; font-weight: 800; color: white;">...</div>
-            </div>
-            <div class="feature-card reveal" style="text-align: center; padding: 2rem; transition-delay: 0.2s;">
-                <h3
-                    style="color: var(--text-muted); font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem;">
-                    Registered Staff</h3>
-                <div id="stat-staff" style="font-size: 3rem; font-weight: 800; color: var(--primary);">...</div>
-            </div>
-            <div class="feature-card reveal" style="text-align: center; padding: 2rem; transition-delay: 0.3s;">
-                <h3
-                    style="color: var(--text-muted); font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem;">
-                    Tickets Handled</h3>
-                <div id="stat-tickets" style="font-size: 3rem; font-weight: 800; color: var(--secondary);">...</div>
-            </div>
+        <div class="dash-stat">
+          <div class="ds-label">Consistency</div>
+          <div class="ds-value" id="dashConsistency" style="color:var(--premium)">—</div>
+          <div class="prog-bar-wrap" style="margin-top:10px"><div class="prog-bar-fill" id="barConsist" style="width:0%;background:linear-gradient(90deg,var(--premium),var(--accent))"></div></div>
         </div>
-    </section>
-
-    <section id="features" class="section reveal">
-        <div class="section-header">
-            <h2 class="section-title text-gradient">Core Features</h2>
-            <p style="color: var(--text-muted); max-width: 600px; margin: 0 auto;">Everything you need to manage your
-                community, staff workflows, and support tickets seamlessly.</p>
+        <div class="dash-stat">
+          <div class="ds-label">Shift Streak</div>
+          <div class="ds-value" id="dashStreak" style="color:var(--enterprise)">—</div>
+          <div class="ds-change" style="color:var(--text3)">🔥 Keep it going!</div>
         </div>
-
-        <div class="features-grid">
-            <div class="feature-card reveal" style="transition-delay: 0.1s;">
-                <div class="icon-wrapper" style="transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
-                    🎟️
-                </div>
-                <h3>Advanced Ticket System</h3>
-                <p>Allow users to report staff or send feedback. Guild admins can easily claim, manage, and close
-                    tickets with beautiful UI panels and direct DM routing.</p>
-            </div>
-            <div class="feature-card reveal" style="transition-delay: 0.2s;">
-                <div class="icon-wrapper" style="transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
-                    ðŸ“
-                </div>
-                <h3>Staff & Helper Applications</h3>
-                <p>Deploy application panels instantly. Review, accept, or deny applications via an interactive workflow
-                    sent directly to server management.</p>
-            </div>
-            <div class="feature-card reveal" style="transition-delay: 0.3s;">
-                <div class="icon-wrapper" style="transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
-                    â±ï¸
-                </div>
-                <h3>Shift Logging</h3>
-                <p>Track staff activity accurately. Users can start their shift (`/shift_start`), end their shift, and
-                    admins can view detailed statistics and shift hours.</p>
-            </div>
+        <div class="dash-stat">
+          <div class="ds-label">Warnings</div>
+          <div class="ds-value" id="dashWarns" style="color:var(--red)">—</div>
+          <div class="ds-change" style="color:var(--text3)">Active warnings</div>
         </div>
-    </section>
-
-    <section id="auto-promo" class="section"
-        style="background: rgba(255,255,255,0.01); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
-        <div class="section-header">
-            <h2 class="section-title text-gradient">Automated Promotions</h2>
-            <p style="color: var(--text-muted); max-width: 600px; margin: 0 auto;">Say goodbye to manual rank checks.
-                Our engine evaluates staff across 9 distinct requirements automatically.</p>
-        </div>
-
-        <div class="feature-card" style="max-width: 800px; margin: 0 auto;">
-            <div class="icon-wrapper" style="background: rgba(139, 92, 246, 0.1); color: var(--secondary);">📈</div>
-            <h3>9-Point Evaluation Engine</h3>
-            <p>Automatically promote your staff when they hit milestones. Configurable per-server.</p>
-            <ul class="req-list">
-                <li>Points & Score</li>
-                <li>Completed Shifts</li>
-                <li>Activity Consistency</li>
-                <li>Maximum Warnings Limit</li>
-                <li>Total Shift Hours</li>
-                <li>Earned Achievements</li>
-                <li>User Reputation</li>
-                <li>Days in Server</li>
-                <li>Clean Record Days</li>
-            </ul>
-        </div>
-    </section>
-
-    <section id="commands-search" class="section reveal">
-        <div class="section-header">
-            <h2 class="section-title text-gradient">Search Commands</h2>
-            <p style="color: var(--text-muted); max-width: 600px; margin: 0 auto;">Explore all the tools STRATA offers
-                across its Free, Premium, and Enterprise tiers.</p>
-        </div>
-
-        <div class="feature-card" style="max-width: 800px; margin: 0 auto; padding: 2rem;">
-            <div class="form-group" style="margin-bottom: 2rem;">
-                <input type="text" id="commandSearchInput" class="form-control"
-                    placeholder="Search commands (e.g., ticket, promote, stats)..."
-                    style="font-size: 1.1rem; padding: 1rem;">
-            </div>
-
-            <div class="command-results" id="commandResults"
-                style="display: flex; flex-direction: column; gap: 1rem; max-height: 650px; overflow-y: auto; padding-right: 10px;">
-                <!-- Commands injected by JS -->
-            </div>
-        </div>
-
-        <style>
-            /* Custom Scrollbar for results */
-            .command-results::-webkit-scrollbar {
-                width: 6px;
-            }
-
-            .command-results::-webkit-scrollbar-track {
-                background: rgba(255, 255, 255, 0.05);
-                border-radius: 4px;
-            }
-
-            .command-results::-webkit-scrollbar-thumb {
-                background: rgba(255, 255, 255, 0.2);
-                border-radius: 4px;
-            }
-
-            .command-results::-webkit-scrollbar-thumb:hover {
-                background: var(--primary);
-            }
-
-            /* Command Preview Accordion */
-            .command-item {
-                background: rgba(255, 255, 255, 0.02);
-                border: 1px solid var(--border);
-                border-radius: 12px;
-                overflow: hidden;
-                transition: all 0.3s ease;
-            }
-
-            .command-item:hover {
-                border-color: rgba(244, 114, 182, 0.3);
-                background: rgba(255, 255, 255, 0.04);
-            }
-
-            .command-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 1.25rem;
-                gap: 1rem;
-            }
-
-            .command-actions {
-                display: flex;
-                align-items: center;
-                gap: 1rem;
-                flex-shrink: 0;
-            }
-
-            .btn-preview {
-                background: rgba(255, 255, 255, 0.05);
-                border: 1px solid var(--border);
-                color: var(--text-muted);
-                padding: 0.4rem 0.8rem;
-                border-radius: 6px;
-                font-size: 0.85rem;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                transition: all 0.2s;
-            }
-
-            .btn-preview:hover {
-                color: var(--text-main);
-                background: rgba(255, 255, 255, 0.1);
-            }
-
-            .btn-preview.active {
-                background: rgba(139, 92, 246, 0.2);
-                color: #c4b5fd;
-                border-color: rgba(139, 92, 246, 0.4);
-            }
-
-            .btn-preview svg {
-                transition: transform 0.3s ease;
-            }
-
-            .btn-preview.active svg {
-                transform: rotate(180deg);
-            }
-
-            .command-preview {
-                max-height: 0;
-                overflow: hidden;
-                transition: max-height 0.5s cubic-bezier(0.175, 0.885, 0.32, 1);
-                background: rgba(0, 0, 0, 0.2);
-                border-top: 1px solid transparent;
-            }
-
-            .command-item.expanded .command-preview {
-                border-top-color: var(--border);
-            }
-
-            .preview-content {
-                padding: 1.5rem;
-                display: flex;
-                justify-content: center;
-            }
-        </style>
-    </section>
-
-    <section id="tiers" class="section">
-        <div class="section-header">
-            <h2 class="section-title text-gradient">Choose Your Tier</h2>
-            <p style="color: var(--text-muted); max-width: 600px; margin: 0 auto;">Unlock advanced analytics, visual
-                leaderboards, and enterprise automation.</p>
-        </div>
-
-        <div class="calculator-container"
-            style="max-width: 800px; margin: 0 auto 3rem auto; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; text-align: center;">
-            <h3 style="margin-bottom: 1rem;">Server Size Estimator</h3>
-            <p style="color: var(--text-muted); margin-bottom: 2rem;">Adjust the slider based on your Discord server's
-                active staff size to see our recommendation.</p>
-
-            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem;">
-                <span style="font-weight: bold; color: var(--text-muted);">1</span>
-                <input type="range" id="staffSlider" min="1" max="100" value="10"
-                    style="flex: 1; -webkit-appearance: none; appearance: none; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; outline: none; transition: background 0.3s;">
-                <span style="font-weight: bold; color: var(--text-muted);">100+</span>
-            </div>
-
-            <style>
-                #staffSlider::-webkit-slider-thumb {
-                    -webkit-appearance: none;
-                    appearance: none;
-                    width: 24px;
-                    height: 24px;
-                    border-radius: 50%;
-                    background: linear-gradient(135deg, var(--primary), var(--secondary));
-                    cursor: pointer;
-                    box-shadow: 0 0 15px rgba(244, 114, 182, 0.5);
-                    transition: transform 0.2s;
-                }
-
-                #staffSlider::-webkit-slider-thumb:hover {
-                    transform: scale(1.2);
-                }
-            </style>
-
-            <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 1rem;">
-                <div style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px; flex: 1; min-width: 150px;">
-                    <div
-                        style="font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">
-                        Selected Staff</div>
-                    <div id="calcStaffCount" style="font-size: 2rem; font-weight: 800; color: #fff;">10</div>
-                </div>
-                <div style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px; flex: 1; min-width: 150px;">
-                    <div
-                        style="font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">
-                        Recommended Tier</div>
-                    <div id="calcTierRec"
-                        style="font-size: 1.5rem; font-weight: 800; color: var(--primary); margin-top: 0.25rem;">Base
-                        (Free)</div>
-                </div>
-                <div style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px; flex: 1; min-width: 150px;">
-                    <div
-                        style="font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">
-                        Hours Saved/Mo</div>
-                    <div id="calcHoursSaved" style="font-size: 2rem; font-weight: 800; color: var(--secondary);">~20h
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="pricing-grid">
-            <!-- Free / Base Tier -->
-            <div class="price-card">
-                <div class="tier-name">Base (Free)</div>
-                <div class="tier-desc">v1 & v2 Commands</div>
-                <div class="tier-price">$0<span>/mo</span></div>
-                <ul class="feature-list">
-                    <li><i>✓</i> Ticket System (Setup & Logs)</li>
-                    <li><i>✓</i> Staff App Panel & Workflows</li>
-                    <li><i>✓</i> User Points, Rep & Leaderboards</li>
-                    <li><i>✓</i> Shift Stats tracking</li>
-                    <li><i>✓</i> Auto-promotion module</li>
-                </ul>
-                <a href="https://discord.gg/smNwftEhKe" target="_blank" class="btn btn-outline"
-                    style="width: 100%;">Start Free</a>
-            </div>
-
-            <!-- Premium Tier -->
-            <div class="price-card popular">
-                <div class="popular-badge">Most Popular</div>
-                <div class="tier-name" style="color: var(--primary);">Premium</div>
-                <div class="tier-desc">v3, v4, v5 Commands</div>
-                <div class="tier-price">$9.99<span>/mo</span></div>
-                <ul class="feature-list">
-                    <li><i>✓</i> Everything in Base</li>
-                    <li class="pro"><i>✦</i> Advanced Analytics</li>
-                    <li class="pro"><i>✦</i> Advanced Moderation Commands</li>
-                    <li class="pro"><i>✦</i> Enhanced Staff Features</li>
-                    <li class="pro"><i>✦</i> Priority Support</li>
-                </ul>
-                <a href="https://discord.gg/smNwftEhKe" target="_blank" class="btn btn-primary"
-                    style="width: 100%;">Upgrade to Premium</a>
-            </div>
-
-            <!-- Enterprise Tier -->
-            <div class="price-card">
-                <div class="tier-name" style="color: var(--secondary);">Enterprise</div>
-                <div class="tier-desc">v6, v7, v8 Commands</div>
-                <div class="tier-price">$29.99<span>/mo</span></div>
-                <ul class="feature-list">
-                    <li><i>✓</i> Everything in Premium</li>
-                    <li class="pro" style="color: var(--secondary);"><i>✦</i> Advanced Insights</li>
-                    <li class="pro" style="color: var(--secondary);"><i>✦</i> Predictions and Forecasting</li>
-                    <li class="pro" style="color: var(--secondary);"><i>✦</i> Ultimate Visual Leaderboards</li>
-                    <li class="pro" style="color: var(--secondary);"><i>✦</i> Multi-Bot Access</li>
-                </ul>
-                <a href="https://discord.gg/smNwftEhKe" target="_blank" class="btn btn-outline" style="width: 100%;">Get
-                    Enterprise</a>
-            </div>
-        </div>
-    </section>
-
-    <section id="reviews" class="section"
-        style="background: rgba(255,255,255,0.01); border-top: 1px solid var(--border);">
-        <div class="section-header">
-            <h2 class="section-title text-gradient">Community Reviews</h2>
-            <p style="color: var(--text-muted); max-width: 600px; margin: 0 auto;">See what others are saying or leave
-                your own review!</p>
-        </div>
-
-        <div class="review-form-container">
-            <form id="reviewForm">
-                <div class="form-group">
-                    <label>Rating (1-5 stars)</label>
-                    <div class="star-rating">
-                        <input type="radio" id="star5" name="rating" value="5" />
-                        <label for="star5" title="5 stars">★</label>
-                        <input type="radio" id="star4" name="rating" value="4" />
-                        <label for="star4" title="4 stars">★</label>
-                        <input type="radio" id="star3" name="rating" value="3" />
-                        <label for="star3" title="3 stars">★</label>
-                        <input type="radio" id="star2" name="rating" value="2" />
-                        <label for="star2" title="2 stars">★</label>
-                        <input type="radio" id="star1" name="rating" value="1" />
-                        <label for="star1" title="1 star">★</label>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="reviewerName">Your Name</label>
-                    <input type="text" id="reviewerName" class="form-control" placeholder="Anonymous" maxlength="50">
-                </div>
-                <div class="form-group">
-                    <label for="reviewText">Review</label>
-                    <textarea id="reviewText" class="form-control" rows="4"
-                        placeholder="Share your experience with STRATA..." required maxlength="500"></textarea>
-                </div>
-                <button type="submit" class="btn btn-primary" style="width: 100%;">Submit Review</button>
-            </form>
-        </div>
-
-        <div class="reviews-list" id="reviewsList">
-            <div class="no-reviews" id="noReviewsMsg">Be the first to leave a review!</div>
-            <!-- Reviews will be dynamically added here -->
-        </div>
-    </section>
-
-    <footer>
-        <div class="footer-logo">
-            <span
-                style="background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">STRATA</span>
-        </div>
-        <p>© 2026 Reyrey-mibombo. Released under MIT License.</p>
-        <p style="margin-top: 1rem; font-size: 0.9rem;">
-            Built with Express, Discord.js & MongoDB.
-        </p>
-    </footer>
-
-    <script>
-        // Track mouse movement for background parallax
-        document.addEventListener('mousemove', (e) => {
-            const x = (e.clientX / window.innerWidth) * 100;
-            const y = (e.clientY / window.innerHeight) * 100;
-            document.documentElement.style.setProperty('--mouseX', x + '%');
-            document.documentElement.style.setProperty('--mouseY', y + '%');
-        });
-
-        // 3D Card Hover Tilt Effect
-        document.querySelectorAll('.feature-card, .price-card, .dashboard-preview').forEach(card => {
-            card.addEventListener('mousemove', e => {
-                const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-
-                const centerX = rect.width / 2;
-                const centerY = rect.height / 2;
-
-                const rotateX = ((y - centerY) / centerY) * -5;
-                const rotateY = ((x - centerX) / centerX) * 5;
-
-                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
-
-                // Icon bounce effect
-                const icon = card.querySelector('.icon-wrapper');
-                if (icon) {
-                    icon.style.transform = 'translateY(-5px) scale(1.1)';
-                }
-            });
-
-            card.addEventListener('mouseleave', () => {
-                card.style.transform = '';
-
-                const icon = card.querySelector('.icon-wrapper');
-                if (icon) {
-                    icon.style.transform = '';
-                }
-            });
-        });
-
-        // Intersection Observer for scroll animations
-        const observerOptions = {
-            root: null,
-            rootMargin: '0px',
-            threshold: 0.15
-        };
-
-        const observer = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('active');
-                    observer.unobserve(entry.target);
-                }
-            });
-        }, observerOptions);
-
-        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
-
-        // Simulated Discord mockup typing animation
-        setTimeout(() => {
-            const mockup = document.querySelector('.discord-mockup');
-            if (mockup) {
-                mockup.classList.add('loading');
-                setTimeout(() => {
-                    mockup.classList.remove('loading');
-                }, 2500);
-            }
-        }, 1000);
-
-        // Navbar blur on scroll
-        window.addEventListener('scroll', () => {
-            const nav = document.getElementById('navbar');
-            if (window.scrollY > 50) {
-                nav.style.background = 'rgba(9, 9, 11, 0.9)';
-                nav.style.boxShadow = '0 4px 30px rgba(0, 0, 0, 0.5)';
-            } else {
-                nav.style.background = 'rgba(9, 9, 11, 0.7)';
-                nav.style.boxShadow = 'none';
-            }
-        });
-
-        // Reviews functionality
-        document.getElementById('reviewForm').addEventListener('submit', function (e) {
-            e.preventDefault();
-
-            // Get values
-            let ratingInput = document.querySelector('input[name="rating"]:checked');
-            let rating = 1; // Default to 1 star if not selected
-
-            if (ratingInput) {
-                rating = parseInt(ratingInput.value);
-            }
-
-            let name = document.getElementById('reviewerName').value.trim();
-            if (!name) name = 'Anonymous User';
-
-            const text = document.getElementById('reviewText').value.trim();
-
-            // Create review element
-            const reviewItem = document.createElement('div');
-            reviewItem.className = 'review-item';
-
-            // Generate stars
-            const starsHTML = 'â˜…'.repeat(rating) + '<span style="color: var(--text-muted); opacity: 0.3;">' + 'â˜…'.repeat(5 - rating) + '</span>';
-
-            // Generate avatar initial
-            const initial = name.charAt(0).toUpperCase();
-
-            reviewItem.innerHTML = `
-                <div class="review-header">
-                    <div class="review-author">
-                        <div class="review-author-avatar">${initial}</div>
-                        ${name}
-                    </div>
-                    <div class="review-stars">${starsHTML}</div>
-                </div>
-                <div class="review-text">${text}</div>
-            `;
-
-            // Add to list
-            const reviewsList = document.getElementById('reviewsList');
-            const noReviewsMsg = document.getElementById('noReviewsMsg');
-
-            if (noReviewsMsg) {
-                noReviewsMsg.style.display = 'none';
-            }
-
-            // Insert at top
-            reviewsList.insertBefore(reviewItem, reviewsList.firstChild || noReviewsMsg);
-
-            // Reset form
-            this.reset();
-        });
-
-        // Command Search Functionality
-        let commands = [
-            { name: 'buy', desc: 'View pricing and upgrade your server to Premium or Enterprise', tier: 'Free' },
-            { name: 'enterprise', desc: 'View Enterprise tier benefits and upgrade', tier: 'Free' },
-            { name: 'premium', desc: 'View Premium tier benefits and upgrade', tier: 'Free' },
-            { name: 'activity_chart', desc: 'View activity chart', tier: 'Free' },
-            { name: 'activity_log', desc: 'View recent activity log', tier: 'Premium' },
-            { name: 'apply_blacklist', desc: 'Manage application blacklist', tier: 'Premium' },
-            { name: 'apply_panel', desc: 'Create application panel', tier: 'Free' },
-            { name: 'apply_questions', desc: 'Customize application questions', tier: 'Free' },
-            { name: 'apply_setup', desc: 'Setup application system for Staff or Helpers', tier: 'Premium' },
-            { name: 'apply_stats', desc: 'View application statistics', tier: 'Free' },
-            { name: 'apply_status', desc: 'Check your application status', tier: 'Free' },
-            { name: 'auto_promotion', desc: 'View auto-promotion settings and point thresholds', tier: 'Enterprise' },
-            { name: 'auto_rank_up', desc: 'Show all staff who qualify for an automatic rank-up', tier: 'Free' },
-            { name: 'check_points', desc: 'User to check', tier: 'Free' },
-            { name: 'check_activity', desc: 'Check staff member activity status', tier: 'Premium' },
-            { name: 'daily_summary', desc: 'Get daily activity summary report', tier: 'Premium' },
-            { name: 'demote', desc: 'Manually demote a staff member', tier: 'Enterprise' },
-            { name: 'help', desc: 'Get help and command list', tier: 'Free' },
-            { name: 'invite_link', desc: 'Get the server invite link', tier: 'Free' },
-            { name: 'leaderboard', desc: 'Staff activity leaderboard rankings', tier: 'Premium' },
-            { name: 'monthly_summary', desc: 'View monthly activity summary', tier: 'Enterprise' },
-            { name: 'ping', desc: 'Check bot latency and response time', tier: 'Free' },
-            { name: 'progress_tracker', desc: 'Track your progress toward the next rank', tier: 'Free' },
-            { name: 'promote', desc: 'Manually promote a staff member', tier: 'Free' },
-            { name: 'report_issue', desc: 'Report an issue with the bot', tier: 'Premium' },
-            { name: 'set_rank_roles', desc: '[Free] Set custom roles for each promotion rank', tier: 'Premium' },
-            { name: 'setup_promo', desc: '[Free] Quick setup for promotion system', tier: 'Free' },
-            { name: 'set_requirements', desc: '[Free] Set promotion requirements for a rank', tier: 'Premium' },
-            { name: 'shift_end', desc: 'End your work shift', tier: 'Free' },
-            { name: 'shift_start', desc: 'Start your work shift', tier: 'Premium' },
-            { name: 'staff_list', desc: 'List all staff members in the server', tier: 'Free' },
-            { name: 'staff_profile', desc: 'View staff member profile', tier: 'Free' },
-            { name: 'staff_rank', desc: 'View staff rank and progression', tier: 'Free' },
-            { name: 'staff_stats', desc: 'View staff statistics', tier: 'Free' },
-            { name: 'ticketlogs', desc: 'View all ticket logs with detailed embeds', tier: 'Premium' },
-            { name: 'ticketsetup', desc: 'Setup the ticket system with Report Staff and Feedback buttons', tier: 'Free' },
-            { name: 'view_rank_roles', desc: '[Free] View all configured rank roles for promotions', tier: 'Free' },
-            { name: 'warn', desc: 'Warn a user for rule violations', tier: 'Premium' },
-            { name: 'activity_alert', desc: 'Manage activity alerts (on/off/check status)', tier: 'Premium' },
-            { name: 'add_achievement', desc: '[Premium] Award a specific staff achievement', tier: 'Premium' },
-            { name: 'add_reputation', desc: '[Premium] Add reputation points to a user', tier: 'Free' },
-            { name: 'alert_system', desc: 'Configure custom alert rules', tier: 'Enterprise' },
-            { name: 'bonus_points', desc: 'Award bonus points to staff', tier: 'Premium' },
-            { name: 'check_requirements', desc: '[Premium] Quick check if user can be promoted', tier: 'Premium' },
-            { name: 'check_logs', desc: 'Check staff activity logs', tier: 'Free' },
-            { name: 'next_promotion', desc: '[Premium] See who is next in line for promotion', tier: 'Enterprise' },
-            { name: 'points', desc: 'Check your current points balance', tier: 'Premium' },
-            { name: 'progress_report', desc: 'View progress report', tier: 'Free' },
-            { name: 'promotion_predict', desc: '[Premium] Predict when user will be promoted', tier: 'Premium' },
-            { name: 'promotion_requirements', desc: '[Premium] View promotion requirements', tier: 'Free' },
-            { name: 'promotion_status', desc: '[Premium] Check promotion status and requirements', tier: 'Enterprise' },
-            { name: 'rank_predict', desc: 'Predict time to rank up', tier: 'Free' },
-            { name: 'remove_points', desc: '[Premium] Remove points from a user', tier: 'Free' },
-            { name: 'reputation', desc: 'Check reputation points', tier: 'Premium' },
-            { name: 'reset_points', desc: '[Premium] Reset all staff points', tier: 'Free' },
-            { name: 'reward_points', desc: 'View reward points', tier: 'Premium' },
-            { name: 'set_requirements_plus', desc: '[Free+] Set 5 promotion requirements including warnings and shift hours', tier: 'Free' },
-            { name: 'shift_stats', desc: '[Premium] View shift statistics for a user', tier: 'Free' },
-            { name: 'staff_score', desc: 'View overall staff score', tier: 'Free' },
-            { name: 'task_assign', desc: 'Assign tasks to staff members', tier: 'Free' },
-            { name: 'time_tracking', desc: 'Track time worked', tier: 'Free' },
-            { name: 'top_points', desc: '[Premium] Show top point earners', tier: 'Premium' },
-            { name: 'weekly_report', desc: 'View weekly staff report', tier: 'Free' },
-            { name: 'achievement_tracker', desc: 'Track and view your achievements', tier: 'Free' },
-            { name: 'advanced_logs', desc: 'View advanced moderation logs', tier: 'Premium' },
-            { name: 'alert_summary', desc: 'View alert summary', tier: 'Free' },
-            { name: 'attendance_summary', desc: 'View attendance summary', tier: 'Free' },
-            { name: 'auto_assign_roles', desc: 'Configure auto role assignment', tier: 'Free' },
-            { name: 'auto_remind', desc: 'Configure auto reminders', tier: 'Enterprise' },
-            { name: 'bonus_allocation', desc: 'Allocate bonus points to a user', tier: 'Free' },
-            { name: 'daily_insights', desc: 'View daily insights and statistics', tier: 'Enterprise' },
-            { name: 'detailed_profile', desc: 'View detailed profile of a user', tier: 'Free' },
-            { name: 'efficiency_chart', desc: 'View efficiency chart', tier: 'Premium' },
-            { name: 'leaderboards', desc: 'View server leaderboards', tier: 'Free' },
-            { name: 'mod_notes_advanced', desc: 'View advanced mod notes', tier: 'Free' },
-            { name: 'monthly_insights', desc: 'View monthly insights and statistics', tier: 'Free' },
-            { name: 'performance_score', desc: 'View performance analytics', tier: 'Free' },
-            { name: 'premium_stats', desc: 'View premium statistics', tier: 'Free' },
-            { name: 'priority_alerts', desc: 'View and manage priority alerts', tier: 'Premium' },
-            { name: 'promotion_history', desc: 'View promotion history', tier: 'Free' },
-            { name: 'promotion_predictor', desc: 'Predict promotions based on performance', tier: 'Free' },
-            { name: 'reward_summary', desc: 'View reward summary', tier: 'Free' },
-            { name: 'role_assign', desc: 'Assign a role to a user', tier: 'Enterprise' },
-            { name: 'set_requirements_premium', desc: '[Premium] Set 7 promotion requirements including achievements & reputation', tier: 'Premium' },
-            { name: 'shift_optimizer', desc: 'Optimize shift scheduling', tier: 'Premium' },
-            { name: 'staff_efficiency', desc: 'View staff efficiency metrics', tier: 'Free' },
-            { name: 'staff_rank_advanced', desc: 'Advanced staff rank view', tier: 'Free' },
-            { name: 'task_optimizer', desc: 'Optimize and analyze tasks', tier: 'Free' },
-            { name: 'task_reassign', desc: 'Reassign a task to another user', tier: 'Enterprise' },
-            { name: 'alert_mod', desc: 'Alert moderators about an issue', tier: 'Enterprise' },
-            { name: 'anti_spam', desc: 'Configure anti-spam settings', tier: 'Premium' },
-            { name: 'audit_logs', desc: 'View audit logs', tier: 'Free' }, \n            { name: 'auto_ban', desc: 'Configure auto-ban settings', tier: 'Free' },
-            { name: 'auto_punish', desc: 'Configure auto-punishment settings', tier: 'Free' },
-            { name: 'auto_warn', desc: 'Configure auto-warn settings', tier: 'Free' },
-            { name: 'ban_user', desc: 'Ban a user from the server', tier: 'Premium' },
-            { name: 'clear_warnings', desc: 'Clear all warnings for a user', tier: 'Free' },
-            { name: 'emoji_control', desc: 'Configure emoji control settings', tier: 'Free' },
-            { name: 'history_lookup', desc: 'Lookup user moderation history', tier: 'Premium' },
-            { name: 'kick_user', desc: 'Kick a user from the server', tier: 'Free' },
-            { name: 'link_blocker', desc: 'Configure link blocker settings', tier: 'Free' },
-            { name: 'message_filter', desc: 'Configure message filter settings', tier: 'Premium' },
-            { name: 'moderation_chart', desc: 'View moderation statistics chart', tier: 'Free' },
-            { name: 'moderation_logs', desc: 'View moderation logs', tier: 'Premium' },
-            { name: 'moderation_stats', desc: 'View moderation statistics', tier: 'Enterprise' },
-            { name: 'mod_report', desc: 'Submit a report to moderators', tier: 'Free' },
-            { name: 'mod_settings', desc: 'Configure moderation settings', tier: 'Premium' },
-            { name: 'mute_user', desc: 'Mute a user', tier: 'Free' },
-            { name: 'notify_mods', desc: 'Notify moderators', tier: 'Free' },
-            { name: 'punishment_summary', desc: 'View punishment summary', tier: 'Enterprise' },
-            { name: 'report_check', desc: 'Check reports status', tier: 'Free' },
-            { name: 'rule_violation', desc: 'Report a rule violation', tier: 'Premium' },
-            { name: 'strike_add', desc: 'Add strike to user', tier: 'Premium' },
-            { name: 'strike_check', desc: 'Check user strikes', tier: 'Premium' },
-            { name: 'unmute_user', desc: 'Unmute a user', tier: 'Free' },
-            { name: 'warnings', desc: 'View warnings for a user', tier: 'Free' },
-            { name: 'activity_report', desc: '[Analytics] Generate activity report', tier: 'Free' },
-            { name: 'activity_comparison', desc: 'Compare activity between two periods', tier: 'Free' },
-            { name: 'activity_heatmap', desc: 'View activity heatmap', tier: 'Free' },
-            { name: 'activity_tracking', desc: 'Track activity for a user', tier: 'Enterprise' },
-            { name: 'analytics_dashboard', desc: 'View analytics dashboard', tier: 'Free' },
-            { name: 'analytics_export', desc: 'Export analytics data', tier: 'Enterprise' },
-            { name: 'data_alert', desc: 'Configure data alerts', tier: 'Premium' },
-            { name: 'data_insights', desc: 'View data insights', tier: 'Free' },
-            { name: 'engagement_chart', desc: 'View engagement chart', tier: 'Enterprise' },
-            { name: 'engagement_score', desc: 'View engagement score', tier: 'Enterprise' },
-            { name: 'event_summary', desc: 'View event summary', tier: 'Free' },
-            { name: 'growth_tracking', desc: 'Track server growth metrics', tier: 'Free' },
-            { name: 'low_performance', desc: 'View low performance staff', tier: 'Premium' },
-            { name: 'member_stats', desc: '[Analytics] View server member statistics', tier: 'Premium' },
-            { name: 'monthly_report', desc: 'View monthly report', tier: 'Free' },
-            { name: 'performance_stats', desc: 'View performance statistics', tier: 'Free' },
-            { name: 'report_summary', desc: 'View report summary', tier: 'Free' },
-            { name: 'role_distribution', desc: 'View role distribution', tier: 'Free' },
-            { name: 'server_overview', desc: 'View server overview', tier: 'Free' },
-            { name: 'server_trends', desc: 'View server trends', tier: 'Enterprise' },
-            { name: 'staff_behavior', desc: 'Analyze staff behavior', tier: 'Free' },
-            { name: 'staff_productivity', desc: 'View staff productivity', tier: 'Free' },
-            { name: 'team_ranking', desc: 'View team ranking', tier: 'Free' },
-            { name: 'top_performers', desc: 'View top performers', tier: 'Enterprise' },
-            { name: 'trend_report', desc: 'View trend report', tier: 'Premium' },
-            { name: 'visual_summary', desc: 'View visual summary', tier: 'Free' },
-            { name: 'weekly_insights', desc: 'View weekly insights', tier: 'Free' },
-            { name: 'activity_insights', desc: 'Get detailed activity insights for this server', tier: 'Free' },
-            { name: 'activity_patterns', desc: 'Analyze activity patterns over the last 30 days', tier: 'Free' },
-            { name: 'alerts_dashboard', desc: 'View active alerts and issues requiring attention', tier: 'Free' },
-            { name: 'analytics_trend', desc: 'View analytics trends comparing this week vs last week', tier: 'Premium' },
-            { name: 'automation_suggestions', desc: 'Get AI-driven automation suggestions based on server data', tier: 'Free' },
-            { name: 'automation_tips', desc: 'Get tips for improving your server automation setup', tier: 'Enterprise' },
-            { name: 'efficiency_analysis', desc: 'Analyze staff efficiency: points per shift hour', tier: 'Free' },
-            { name: 'engagement_summary', desc: 'View server engagement summary', tier: 'Premium' }, \n            { name: 'engagement_trends', desc: 'Compare engagement trends week over week', tier: 'Free' },
-            { name: 'forecast', desc: 'View 7-day activity forecast based on recent trends', tier: 'Free' },
-            { name: 'monthly_forecast', desc: 'View 30-day activity forecast based on 60-day trends', tier: 'Premium' },
-            { name: 'optimization_report', desc: 'Identify underperforming staff and optimization opportunities', tier: 'Enterprise' },
-            { name: 'performance_reports', desc: 'Generate a full performance report for all staff', tier: 'Free' },
-            { name: 'prediction_chart', desc: 'View a rolling prediction chart of server activity', tier: 'Free' },
-            { name: 'productivity_analysis', desc: 'Analyze commands-per-shift-hour productivity for staff', tier: 'Premium' },
-            { name: 'recommendation_summary', desc: 'View top staff recommendations based on performance', tier: 'Premium' },
-            { name: 'role_efficiency', desc: 'Compare performance efficiency across different staff ranks', tier: 'Free' },
-            { name: 'scoreboard', desc: 'View the top 10 staff leaderboard by points', tier: 'Enterprise' },
-            { name: 'server_health', desc: 'View overall server health and statistics', tier: 'Free' },
-            { name: 'set_requirements_enterprise', desc: '[Enterprise] Full 10-requirement promotion configuration', tier: 'Free' },
-            { name: 'staff_forecast', desc: '[Enterprise] Forecast staff needs', tier: 'Free' },
-            { name: 'staff_prediction', desc: 'Predict which staff members are close to a rank promotion', tier: 'Enterprise' },
-            { name: 'staff_recommend', desc: 'Get a staff recommendation for a task or role', tier: 'Enterprise' },
-            { name: 'task_insights', desc: 'View shift and task completion insights', tier: 'Free' },
-            { name: 'team_forecast', desc: 'View team-level activity forecast for the next 7 days', tier: 'Premium' },
-            { name: 'trend_alerts', desc: 'Alert when activity drops significantly compared to last week', tier: 'Free' },
-            { name: 'weekly_forecast', desc: '', tier: 'Free' },
-            { name: 'achievements', desc: '[Enterprise] View achievements and badges', tier: 'Free' },
-            { name: 'achievement_chart', desc: 'View achievement distribution across all staff', tier: 'Free' },
-            { name: 'achievement_rewards', desc: 'View available achievements and your current progress', tier: 'Enterprise' },
-            { name: 'automation_report', desc: 'View a summary of all automated actions taken this month', tier: 'Free' },
-            { name: 'automation_settings', desc: 'View or toggle automation module settings', tier: 'Enterprise' },
-            { name: 'auto_assign', desc: 'View or configure auto-role assignment settings', tier: 'Premium' },
-            { name: 'auto_rewards', desc: 'View automatic reward tiers and your current progress', tier: 'Premium' },
-            { name: 'auto_task', desc: 'View open/incomplete shifts that need attention', tier: 'Premium' },
-            { name: 'bonus_summary', desc: 'View bonus points awarded to staff this month', tier: 'Premium' },
-            { name: 'daily_bonus', desc: '', tier: 'Free' },
-            { name: 'event_rewards', desc: '', tier: 'Premium' },
-            { name: 'milestone_summary', desc: 'View server milestone progress', tier: 'Free' },
-            { name: 'notification_log', desc: 'View recent automated notification events', tier: 'Premium' },
-            { name: 'rank_announce', desc: 'Announce a staff rank promotion', tier: 'Free' },
-            { name: 'reward_logs', desc: 'View a log of rewards and bonuses awarded recently', tier: 'Premium' },
-            { name: 'reward_prediction', desc: 'Predict when you will hit your next reward milestone', tier: 'Free' },
-            { name: 'smart_alerts', desc: 'View AI-powered activity drop alerts for your server', tier: 'Free' },
-            { name: 'smart_notifications', desc: 'View smart notification configuration for your server', tier: 'Premium' },
-            { name: 'task_alerts', desc: 'List shifts that ended without notes or have issues', tier: 'Enterprise' },
-            { name: 'task_completion', desc: 'View task and shift completion rates over the last 30 days', tier: 'Enterprise' },
-            { name: 'weekly_bonus', desc: 'View top 5 staff by points earned this week', tier: 'Free' },
-            { name: 'achievement_display', desc: 'Display your achievements showcase', tier: 'Premium' },
-            { name: 'achievement_tracker_visual', desc: 'Visual progress tracker for all achievements', tier: 'Premium' },
-            { name: 'activity_graph', desc: 'Visual activity graph for the last 14 days', tier: 'Free' },
-            { name: 'activity_summary', desc: 'Full visual summary of server activity', tier: 'Free' },
-            { name: 'analytics_dashboard', desc: 'Full analytics dashboard with all key metrics', tier: 'Premium' },
-            { name: 'automation_overview', desc: 'Visual overview of all automation configurations', tier: 'Premium' },
-            { name: 'auto_promotion_visual', desc: 'Visual auto-promotion dashboard showing all eligible staff', tier: 'Free' },
-            { name: 'bonus_tracker', desc: 'Visual bonus points tracker for a staff member', tier: 'Free' },
-            { name: 'bonus_visual', desc: 'Visual breakdown of bonus points across all staff', tier: 'Premium' },
-            { name: 'elite_badges', desc: 'View elite badges earned by top staff members', tier: 'Premium' },
-            { name: 'elite_rewards', desc: 'View exclusive elite rewards for top-tier staff', tier: 'Free' },
-            { name: 'engagement_chart', desc: 'Visual engagement chart comparing 4 weeks of activity', tier: 'Enterprise' },
-            { name: 'engagement_trends_visual', desc: 'Visual engagement trends with color-coded indicators', tier: 'Premium' },
-            { name: 'event_visuals', desc: 'Visual overview of recent server events', tier: 'Free' },
-            { name: 'growth_forecast', desc: 'Forecast server growth based on recent member activity', tier: 'Free' },
-            { name: 'growth_visuals', desc: 'Visual server growth metrics and trends', tier: 'Free' },
-            { name: 'interactive_dashboard', desc: 'Full interactive server dashboard with all key stats', tier: 'Premium' },
-            { name: 'interactive_summary', desc: 'Interactive summary of your own server stats', tier: 'Free' },
-            { name: 'leaderboard_summary', desc: 'Quick leaderboard summary of top staff', tier: 'Enterprise' },
-            { name: 'leaderboard_visual', desc: 'Full visual leaderboard with progress bars', tier: 'Free' },
-            { name: 'milestone_effects', desc: 'View visual milestone completion effects', tier: 'Free' },
-            { name: 'milestone_tracker', desc: 'Track all server milestones with visual progress', tier: 'Free' },
-            { name: 'notification_effect', desc: 'View recent notification effects and actions taken', tier: 'Free' },
-            { name: 'performance_visual', desc: 'Visual performance breakdown for a staff member', tier: 'Free' },
-            { name: 'prediction_graph', desc: 'Visual prediction graph for the next 7 days', tier: 'Free' },
-            { name: 'prediction_summary', desc: 'Summary of prediction insights based on recent trends', tier: 'Free' },
-            { name: 'premium_effects', desc: 'View your premium tier benefits and effects', tier: 'Free' },
-            { name: 'progress_animation', desc: 'Animated-style progress display for your shift goals', tier: 'Free' },
-            { name: 'progress_chart', desc: 'Visual progress chart for all staff toward their next rank', tier: 'Enterprise' },
-            { name: 'progress_notify', desc: 'Check if any staff are ready for rank-up and should be notified', tier: 'Enterprise' },
-            { name: 'progress_summary', desc: 'Full progress summary for a staff member', tier: 'Free' },
-            { name: 'promotion_announce', desc: 'Announce and log a staff promotion with visual effect', tier: 'Free' },
-            { name: 'promotion_flow', desc: 'Visual promotion flow showing rank progression path', tier: 'Free' },
-            { name: 'rank_animation', desc: 'Show animated rank progression for a user', tier: 'Free' },
-            { name: 'rank_display', desc: 'Display your current rank with visual styling', tier: 'Free' },
-            { name: 'rank_upgrade', desc: 'User to upgrade', tier: 'Premium' },
-            { name: 'reward_display', desc: 'Display your earned rewards and badges', tier: 'Free' },
-            { name: 'reward_flow', desc: 'View the full reward flow and recent distributions', tier: 'Free' },
-            { name: 'season_rewards', desc: 'View seasonal rewards for top staff this season', tier: 'Premium' },
-            { name: 'season_summary', desc: '', tier: 'Free' },
-            { name: 'server_heatmap', desc: 'View hourly activity heatmap for the server', tier: 'Premium' },
-            { name: 'smart_recommendation', desc: 'Smart AI-based staff recommendation for any task', tier: 'Free' },
-            { name: 'staff_highlight', desc: 'Highlight a staff member as top performer', tier: 'Free' },
-            { name: 'staff_recognition', desc: 'Recognize a staff member for their contributions', tier: 'Free' },
-            { name: 'staff_showcase', desc: 'Showcase all active staff with their stats', tier: 'Free' },
-            { name: 'team_highlights', desc: '', tier: 'Free' },
-            { name: 'trend_visuals', desc: 'Visual trend display comparing this week vs last week', tier: 'Enterprise' },
-            { name: 'visual_staff', desc: '[Visual] Visual staff leaderboard', tier: 'Free' },
-            { name: 'visual_feedback', desc: 'Submit or view visual feedback about the bot', tier: 'Premium' },
-            { name: 'visual_leaderboard', desc: 'Full visual leaderboard with all stats', tier: 'Free' },
-            { name: 'visual_rankings', desc: 'Visual ranking system showing all staff tier positions', tier: 'Enterprise' }
-        ];
-        const searchInput = document.getElementById('commandSearchInput');
-        const resultsContainer = document.getElementById('commandResults');
-
-        async function fetchCommands() {
-            try {
-                // Fetch live server commands directly from STRATA bot API
-                const res = await fetch('http://127.0.0.1:3001/api/commands');
-                const json = await res.json();
-                if (json.success) {
-                    commands = json.data;
-                    searchInput.placeholder = `Search all ${commands.length} commands...`;
-                    renderCommands(); // Immediately render on success
-                } else {
-                    // Fallback to offline mock data
-                    searchInput.placeholder = `Search demo commands... (Bot Offline)`;
-                    renderCommands();
-                }
-            } catch (err) {
-                console.warn("Live bot API offline. Loading demo commands offline mode.");
-                // Fallback to offline mock data
-                searchInput.placeholder = `Search demo commands... (Bot Offline)`;
-                renderCommands();
-            }
-        }
-
-        function renderCommands(filter = '') {
-            resultsContainer.innerHTML = '';
-            const query = filter.toLowerCase();
-
-            const filtered = commands.filter(cmd =>
-                cmd.name.toLowerCase().includes(query) ||
-                cmd.desc.toLowerCase().includes(query) ||
-                cmd.tier.toLowerCase().includes(query)
-            );
-
-            if (filtered.length === 0 && commands.length > 0) {
-                resultsContainer.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 1rem;">No commands found matching your search.</div>';
-                return;
-            } else if (commands.length === 0) {
-                resultsContainer.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 1rem;">Loading live commands from STRATA...</div>';
-                return;
-            }
-
-            filtered.forEach(cmd => {
-                const item = document.createElement('div');
-                item.className = 'command-item';
-
-                // Identify if this command has a special mockup
-                const isReport = cmd.name.toLowerCase().includes('report');
-                const isStats = cmd.name.toLowerCase().includes('stats');
-                const hasPreview = true;
-
-                let previewHTML = '';
-
-                if (isReport) {
-                    previewHTML = `
-                        <div class="discord-mockup" style="width: 100%; max-width: 600px; margin: 0 auto;">
-                            <div class="discord-msg">
-                                <div class="discord-avatar"></div>
-                                <div style="width: 100%;">
-                                    <div class="discord-name">STRATA <span style="background: #5865F2; font-size: 0.7rem; padding: 2px 4px; border-radius: 4px; margin-left: 5px;">BOT</span></div>
-                                    <div class="discord-embed" style="border-left-color: #f472b6;">
-                                        <strong style="color: white; font-size: 1.1rem; display: block; margin-bottom: 12px;">ðŸ“ˆ Weekly Report - Feb 10-16, 2026</strong>
-                                        
-                                        <div style="margin-bottom: 10px;">
-                                            <strong style="color: #dbdee1;">ðŸ“Š Activity Summary:</strong><br>
-                                            <span style="color: #94abbd;">â€¢ Total Hours:</span> 187.5 hours<br>
-                                            <span style="color: #94abbd;">â€¢ Active Staff:</span> 10/12<br>
-                                            <span style="color: #94abbd;">â€¢ Shifts Completed:</span> 45<br>
-                                            <span style="color: #94abbd;">â€¢ Tasks Done:</span> 28/32
-                                        </div>
-                                        
-                                        <div style="margin-bottom: 10px;">
-                                            <strong style="color: #dbdee1;">ðŸ† Top Performers:</strong><br>
-                                            1. <span style="color: #3ba55c;">@Sarah</span> - 52 hours<br>
-                                            2. <span style="color: #3ba55c;">@Mike</span> - 38.5 hours<br>
-                                            3. <span style="color: #3ba55c;">@Alex</span> - 28 hours
-                                        </div>
-                                        
-                                        <div style="margin-bottom: 10px;">
-                                            <strong style="color: #dbdee1;">ðŸ“‰ Needs Improvement:</strong><br>
-                                            <span style="color: #ed4245;">â€¢ @Tom - 8 hours</span> (below 20h minimum)
-                                        </div>
-                                        
-                                        <div style="margin-bottom: 10px;">
-                                            <strong style="color: #dbdee1;">ðŸŽ‰ Achievements:</strong><br>
-                                            â€¢ <span style="color: #faa61a;">@Alex</span> promoted to Moderator<br>
-                                            â€¢ Zero incidents this week!
-                                        </div>
-                                        
-                                        <div style="font-weight: bold; margin-top: 12px; color: #fff;">
-                                            Next week goals: 200+ hours total
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                } else if (isStats) {
-                    previewHTML = `
-                        <div class="discord-mockup" style="width: 100%; max-width: 600px; margin: 0 auto;">
-                            <div class="discord-msg">
-                                <div class="discord-avatar"></div>
-                                <div style="width: 100%;">
-                                    <div class="discord-name">STRATA <span style="background: #5865F2; font-size: 0.7rem; padding: 2px 4px; border-radius: 4px; margin-left: 5px;">BOT</span></div>
-                                    <div class="discord-embed" style="border-left-color: #8b5cf6;">
-                                        <strong style="color: white; font-size: 1.1rem; display: block; margin-bottom: 5px;">ðŸ“Š General Server Statistics</strong>
-                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
-                                            <div style="background: #1e1f22; padding: 8px; border-radius: 4px;">
-                                                <div style="color: #94abbd; font-size: 0.8rem; text-transform: uppercase;">Total Members</div>
-                                                <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">1,204</div>
-                                            </div>
-                                            <div style="background: #1e1f22; padding: 8px; border-radius: 4px;">
-                                                <div style="color: #94abbd; font-size: 0.8rem; text-transform: uppercase;">Active Tickets</div>
-                                                <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">4</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    // Universal fallback template for all other commands
-                    let embedColor = '#94abbd'; // Default base tier color
-                    if (cmd.tier.toLowerCase() === 'premium') embedColor = '#8b5cf6';
-                    if (cmd.tier.toLowerCase() === 'enterprise') embedColor = '#f59e0b';
-
-                    previewHTML = `
-                        <div class="discord-mockup" style="width: 100%; max-width: 600px; margin: 0 auto;">
-                            <div class="discord-msg">
-                                <div class="discord-avatar"></div>
-                                <div style="width: 100%;">
-                                    <div style="color: #dbdee1; font-family: monospace; font-size: 0.9rem; margin-bottom: 5px; opacity: 0.8;">
-                                        &gt; /${cmd.name}
-                                    </div>
-                                    <div class="discord-name">STRATA <span style="background: #5865F2; font-size: 0.7rem; padding: 2px 4px; border-radius: 4px; margin-left: 5px;">BOT</span></div>
-                                    <div class="discord-embed" style="border-left-color: ${embedColor}; padding-bottom: 15px;">
-                                        <strong style="color: white; font-size: 1.1rem; display: block; margin-bottom: 8px;">Success \u2705</strong>
-                                        <div style="color: #dbdee1; line-height: 1.4;">
-                                            Executed the <strong>${cmd.name}</strong> tool successfully!<br><br>
-                                            <span style="color: #94abbd; font-style: italic;">"${cmd.desc}"</span>
-                                        </div>
-                                        <div style="margin-top: 15px; font-size: 0.75rem; color: #80848e; display: flex; align-items: center; gap: 5px;">
-                                            <div style="width: 8px; height: 8px; border-radius: 50%; background: ${embedColor};"></div>
-                                            ${cmd.tier} Tier Module â€¢ <div style="font-family: monospace; opacity: 0.8;">strata-engine-v1.4.2</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }
-
-                item.innerHTML = `
-                    <div class="command-header">
-                        <div style="flex: 1; min-width: 0;">
-                            <strong style="color: var(--primary); font-family: monospace; font-size: 1.1rem;">${cmd.name}</strong>
-                            <div style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${cmd.desc}</div>
-                        </div>
-                        <div class="command-actions">
-                            <span style="font-size: 0.8rem; padding: 0.25rem 0.5rem; background: rgba(139, 92, 246, 0.2); color: #c4b5fd; border-radius: 4px; white-space: nowrap;">${cmd.tier}</span>
-                            ${hasPreview ? `
-                                <button class="btn-preview" onclick="togglePreview(this)">
-                                    View Example
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                                </button>
-                            ` : ''}
-                        </div>
-                    </div>
-                    ${hasPreview ? `
-                        <div class="command-preview">
-                            <div class="preview-content">
-                                ${previewHTML}
-                            </div>
-                        </div>
-                    ` : ''}
-                `;
-                resultsContainer.appendChild(item);
-            });
-        }
-
-        // Global function for toggle button
-        window.togglePreview = function (btn) {
-            const commandItem = btn.closest('.command-item');
-            const previewPanel = commandItem.querySelector('.command-preview');
-
-            const isExpanded = commandItem.classList.contains('expanded');
-
-            // Close all others first optionally (accordion style)
-            document.querySelectorAll('.command-item.expanded').forEach(item => {
-                if (item !== commandItem) {
-                    item.classList.remove('expanded');
-                    item.querySelector('.btn-preview').classList.remove('active');
-                    item.querySelector('.command-preview').style.maxHeight = '0px';
-                }
-            });
-
-            if (isExpanded) {
-                // Close it
-                commandItem.classList.remove('expanded');
-                btn.classList.remove('active');
-                previewPanel.style.maxHeight = '0px';
-            } else {
-                // Expand it
-                commandItem.classList.add('expanded');
-                btn.classList.add('active');
-                // Calculate total scroll height of the inner content, plus a buffer
-                previewPanel.style.maxHeight = (previewPanel.scrollHeight + 80) + 'px';
-
-                // Smooth scroll into view so the user doesn't miss the expanded content
-                setTimeout(() => {
-                    previewPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }, 300);
-            }
-        };
-
-        // Initialize fetch on load
-        fetchCommands();
-
-
-        // Search listener
-        searchInput.addEventListener('input', (e) => {
-            renderCommands(e.target.value);
-        });
-        // Live Stats Fetcher
-        async function fetchLiveStats() {
-            try {
-                // Fetch from the bot's local API (Make sure the bot is running on port 3001)
-                const response = await fetch('http://127.0.0.1:3001/api/stats/live');
-                const result = await response.json();
-
-                if (result.success) {
-                    animateValue("stat-servers", 0, result.data.servers, 2000);
-                    animateValue("stat-staff", 0, result.data.staff, 2000);
-                    animateValue("stat-tickets", 0, result.data.tickets, 2000);
-                }
-            } catch (error) {
-                console.error('Failed to fetch live stats:', error);
-                document.getElementById('stat-servers').innerText = "Offline";
-                document.getElementById('stat-staff').innerText = "Offline";
-                document.getElementById('stat-tickets').innerText = "Offline";
-            }
-        }
-
-        // Beautiful Number counting animation
-        function animateValue(id, start, end, duration) {
-            if (start === end) return;
-            var range = end - start;
-            var current = start;
-            var increment = end > start ? 1 : -1;
-            // Calculate step time to ensure smooth animation over the duration
-            var stepTime = Math.abs(Math.floor(duration / range));
-            if (stepTime < 10) stepTime = 10; // Cap speed
-
-            var obj = document.getElementById(id);
-            var timer = setInterval(function () {
-                current += increment;
-                // Add commas for thousands
-                obj.innerHTML = current.toLocaleString();
-                if (current == end) {
-                    clearInterval(timer);
-                }
-            }, stepTime);
-        }
-
-        // Fetch when page loads
-        document.addEventListener('DOMContentLoaded', fetchLiveStats);
-        // Pricing Calculator Logic
-        const staffSlider = document.getElementById('staffSlider');
-        const calcStaffCount = document.getElementById('calcStaffCount');
-        const calcTierRec = document.getElementById('calcTierRec');
-        const calcHoursSaved = document.getElementById('calcHoursSaved');
-
-        if (staffSlider) {
-            staffSlider.addEventListener('input', (e) => {
-                const val = parseInt(e.target.value);
-                calcStaffCount.innerText = val + (val === 100 ? '+' : '');
-
-                const pct = ((val - 1) / 99) * 100;
-                e.target.style.background = `linear-gradient(to right, var(--primary) ${pct}%, rgba(255,255,255,0.1) ${pct}%)`;
-
-                let tier = 'Base (Free)';
-                let color = 'var(--text-muted)';
-                let hours = val * 2;
-
-                if (val >= 50) {
-                    tier = 'Enterprise';
-                    color = 'var(--secondary)';
-                } else if (val >= 15) {
-                    tier = 'Premium';
-                    color = 'var(--primary)';
-                }
-
-                calcTierRec.innerText = tier;
-                calcTierRec.style.color = color;
-                calcHoursSaved.innerText = '~' + hours + 'h';
-
-                // Highlight pricing cards
-                const cards = document.querySelectorAll('.price-card');
-                cards.forEach(card => {
-                    card.style.transform = 'scale(1)';
-                    card.style.boxShadow = 'none';
-                    card.style.border = '1px solid var(--border)';
-                });
-
-                if (cards.length === 3) {
-                    let activeIndex = 0;
-                    if (val >= 50) activeIndex = 2;
-                    else if (val >= 15) activeIndex = 1;
-
-                    cards[activeIndex].style.transform = 'scale(1.05)';
-                    cards[activeIndex].style.boxShadow = `0 0 20px ${color}`;
-                    cards[activeIndex].style.border = `1px solid ${color}`;
-                }
-            });
-
-            // Trigger initial state
-            staffSlider.dispatchEvent(new Event('input'));
-        }
-    </script>
+      </div>
+
+      <!-- Quick Actions -->
+      <div style="display:flex;gap:12px;margin-bottom:32px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="showToast('✅ Shift started! (Demo mode)')">▶ Start Shift</button>
+        <button class="btn btn-secondary" onclick="showPanel('promo');document.querySelectorAll('[data-panel]').forEach(i=>i.classList.toggle('active',i.dataset.panel==='promo'))">🚀 Check Promotion</button>
+        <button class="btn btn-outline" onclick="showPanel('staff');document.querySelectorAll('[data-panel]').forEach(i=>i.classList.toggle('active',i.dataset.panel==='staff'))">👥 View Staff</button>
+      </div>
+
+      <!-- Top stats -->
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px">
+        <h3 style="margin-bottom:16px;font-size:1rem">🏆 Server Leaderboard</h3>
+        <table class="staff-table">
+          <thead><tr><th>Staff</th><th>Rank</th><th>Points</th><th>Shifts</th><th>Consistency</th><th>Progress</th></tr></thead>
+          <tbody id="staffTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Panel: Staff -->
+    <div class="dash-panel" id="panel-staff" style="display:none">
+      <h2 style="font-size:1.4rem;font-weight:800;margin-bottom:4px">👥 Staff List</h2>
+      <p style="color:var(--text2);font-size:.9rem;margin-bottom:24px">All tracked staff members and their live statistics.</p>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px">
+        <table class="staff-table">
+          <thead><tr><th>Staff Member</th><th>Rank</th><th>Points</th><th>Shifts</th><th>Consistency</th><th>Progress</th></tr></thead>
+          <tbody>
+          <tr><td>🟢 Reyrey</td><td><span class="staff-rank admin">ADMIN</span></td><td>1,240</td><td>42</td><td>94%</td><td><div class="prog-bar-wrap" style="width:80px"><div class="prog-bar-fill" style="width:94%"></div></div></td></tr>
+          <tr><td>🟢 Mibombo</td><td><span class="staff-rank manager">MANAGER</span></td><td>712</td><td>27</td><td>88%</td><td><div class="prog-bar-wrap" style="width:80px"><div class="prog-bar-fill" style="width:88%"></div></div></td></tr>
+          <tr><td>🟡 StaffJane</td><td><span class="staff-rank senior">SENIOR</span></td><td>390</td><td>16</td><td>80%</td><td><div class="prog-bar-wrap" style="width:80px"><div class="prog-bar-fill" style="width:80%"></div></div></td></tr>
+          <tr><td>🔴 HelperBob</td><td><span class="staff-rank">STAFF</span></td><td>145</td><td>7</td><td>65%</td><td><div class="prog-bar-wrap" style="width:80px"><div class="prog-bar-fill" style="width:65%"></div></div></td></tr>
+          <tr><td>🔴 NewTrial</td><td><span class="staff-rank">TRIAL</span></td><td>38</td><td>2</td><td>40%</td><td><div class="prog-bar-wrap" style="width:80px"><div class="prog-bar-fill" style="width:40%"></div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Panel: Promotion -->
+    <div class="dash-panel" id="panel-promo" style="display:none">
+      <h2 style="font-size:1.4rem;font-weight:800;margin-bottom:4px">🚀 Promotion Tracker</h2>
+      <p style="color:var(--text2);font-size:.9rem;margin-bottom:24px">Your real-time progress toward the next rank.</p>
+      <div id="promoTrack" class="promo-track"></div>
+    </div>
+
+    <!-- Panel: Shifts -->
+    <div class="dash-panel" id="panel-shifts" style="display:none">
+      <h2 style="font-size:1.4rem;font-weight:800;margin-bottom:4px">⏱️ Shift Log</h2>
+      <p style="color:var(--text2);font-size:.9rem;margin-bottom:24px">Your recent shift history.</p>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px">
+        <table class="staff-table">
+          <thead><tr><th>Date</th><th>Duration</th><th>Points Earned</th><th>Status</th></tr></thead>
+          <tbody>
+          <tr><td>Today, 2:00 PM</td><td>2h 15m</td><td>+27 pts</td><td style="color:var(--green)">✅ Completed</td></tr>
+          <tr><td>Yesterday, 3:30 PM</td><td>1h 45m</td><td>+21 pts</td><td style="color:var(--green)">✅ Completed</td></tr>
+          <tr><td>2 days ago, 6:00 PM</td><td>3h 00m</td><td>+36 pts</td><td style="color:var(--green)">✅ Completed</td></tr>
+          <tr><td>3 days ago, 1:00 PM</td><td>0h 50m</td><td>+10 pts</td><td style="color:var(--yellow)">⏸️ Paused</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Panel: Achievements -->
+    <div class="dash-panel" id="panel-achievements" style="display:none">
+      <h2 style="font-size:1.4rem;font-weight:800;margin-bottom:4px">🏅 Achievements</h2>
+      <p style="color:var(--text2);font-size:.9rem;margin-bottom:24px">Badges and milestones you've unlocked.</p>
+      <div id="achieveList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px"></div>
+    </div>
+
+    <!-- Panel: Analytics -->
+    <div class="dash-panel" id="panel-analytics" style="display:none">
+      <h2 style="font-size:1.4rem;font-weight:800;margin-bottom:4px">📊 Analytics</h2>
+      <p style="color:var(--text2);font-size:.9rem;margin-bottom:24px">Server engagement and activity overview.</p>
+      <div class="dash-stats">
+        <div class="dash-stat"><div class="ds-label">Commands This Week</div><div class="ds-value" style="color:var(--accent)">1,284</div><div class="ds-change ds-up">↑ 12% vs last week</div></div>
+        <div class="dash-stat"><div class="ds-label">Active Users (7d)</div><div class="ds-value" style="color:var(--green)">47</div><div class="ds-change ds-up">↑ 8 new this week</div></div>
+        <div class="dash-stat"><div class="ds-label">Engagement Rate</div><div class="ds-value" style="color:var(--premium)">63%</div><div class="prog-bar-wrap" style="margin-top:10px"><div class="prog-bar-fill" style="width:63%"></div></div></div>
+        <div class="dash-stat"><div class="ds-label">Shifts This Week</div><div class="ds-value" style="color:var(--enterprise)">28</div><div class="ds-change ds-up">↑ 5 more than last week</div></div>
+        <div class="dash-stat"><div class="ds-label">Warnings (7d)</div><div class="ds-value" style="color:var(--red)">4</div><div class="ds-change" style="color:var(--text3)">No spike detected</div></div>
+        <div class="dash-stat"><div class="ds-label">Health Score</div><div class="ds-value" style="color:var(--green)">78</div><div class="prog-bar-wrap" style="margin-top:10px"><div class="prog-bar-fill" style="width:78%;background:linear-gradient(90deg,var(--green),var(--zenith))"></div></div></div>
+      </div>
+    </div>
+
+    <!-- Panel: Alerts -->
+    <div class="dash-panel" id="panel-alerts" style="display:none">
+      <h2 style="font-size:1.4rem;font-weight:800;margin-bottom:4px">🚨 Smart Alerts</h2>
+      <p style="color:var(--text2);font-size:.9rem;margin-bottom:24px">Real-time warning spike detection and at-risk users.</p>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card" style="border-color:var(--green);display:flex;gap:12px;align-items:center"><span style="font-size:1.4rem">🟢</span><div><div style="font-weight:700">Normal Activity</div><div style="color:var(--text2);font-size:.87rem">No warning spikes detected. Daily average: 0.6/day</div></div></div>
+        <div class="card" style="display:flex;gap:12px;align-items:center"><span style="font-size:1.4rem">📊</span><div><div style="font-weight:700">Warnings Today: 1</div><div style="color:var(--text2);font-size:.87rem">Below 7-day average of 2.1/day</div></div></div>
+        <div class="card" style="display:flex;gap:12px;align-items:center"><span style="font-size:1.4rem">✅</span><div><div style="font-weight:700">No At-Risk Users</div><div style="color:var(--text2);font-size:.87rem">No staff members with 2+ warnings in the last 24h</div></div></div>
+      </div>
+    </div>
+
+  </main>
+</div><!-- /dashboard -->
+
+<!-- ── MODALS ── -->
+<!-- Login Modal -->
+<div class="modal-overlay" id="loginModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('loginModal')">✕</button>
+    <div style="font-size:2rem;margin-bottom:12px">🤖</div>
+    <h2>Login with Discord</h2>
+    <p>Connect your Discord account to view your staff profile, track promotion progress, and manage your server dashboard.</p>
+    <button class="discord-btn-big" onclick="doDiscordLogin()">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.101 18.08.114 18.1.134 18.114a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.030z"/></svg>
+      Continue with Discord
+    </button>
+    <p style="margin-top:16px;font-size:.78rem;color:var(--text3);text-align:center">We only request <strong>identify</strong> and <strong>guilds</strong> scopes. We never post on your behalf.</p>
+  </div>
+</div>
+
+<!-- Command Detail Modal -->
+<div class="modal-overlay" id="cmdModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('cmdModal')">✕</button>
+    <h2 id="modalTitle" style="font-family:'Courier New',monospace;color:var(--accent)"></h2>
+    <div id="modalBody"></div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <a href="https://discord.gg/smNwftEhKe" target="_blank" class="btn btn-primary" style="flex:1;justify-content:center">Use it in Discord</a>
+      <button class="btn btn-secondary" onclick="closeModal('cmdModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
 </body>
-
 </html>
