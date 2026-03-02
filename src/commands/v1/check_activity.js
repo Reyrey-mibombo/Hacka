@@ -1,16 +1,3 @@
-Yes, this is **real, functional data**. It does not generate fake numbers.
-
-1.  **Join Position**: It counts the actual members in your server list and sorts them by their real join date to find the exact position.
-2.  **Trust Score**: It calculates this using the user's **real** creation date and avatar status.
-3.  **Mutual Servers**: It scans the bot's cache to see which other servers the user is in.
-4.  **Activities**: It pulls live data directly from Discord's API (Spotify songs, Games, etc.).
-
-**Important Requirement:**
-For this code to work in **all servers**, you must ensure your bot has the **`GuildPresences` Intent** enabled in your Discord Developer Portal. Without this, the bot cannot see user activities (Spotify/Games) and will always show "Offline."
-
-Here is the fully polished, error-free code with the logic fixes for large servers:
-
-```javascript
 const { 
     SlashCommandBuilder, 
     EmbedBuilder, 
@@ -204,7 +191,7 @@ module.exports = {
             }
             else if (action === 'join_position') {
                 await i.deferReply({ ephemeral: true });
-                const pos = await getJoinPosition(interaction.guild, member);
+                const pos = getJoinPosition(interaction.guild, member);
                 const posEmbed = new EmbedBuilder()
                     .setTitle(`🚪 Join Position: ${targetUser.username}`)
                     .setDescription(`They were the **#${pos}** member to join this server.`)
@@ -294,45 +281,38 @@ function buildTimelineText(history) {
     }).join('\n');
 }
 
-// Real Data: Calculate Join Position
-async function getJoinPosition(guild, member) {
-    // We need to fetch members to ensure the cache is populated for calculation
-    // Note: For huge servers (100k+), this standard fetch might not get everyone,
-    // but it gets as many as the API allows in one go.
-    await guild.members.fetch();
+// Safe Join Position (Uses cache to prevent crashes)
+function getJoinPosition(guild, member) {
+    // Sort existing cache by join date
+    const sorted = [...guild.members.cache.values()]
+        .sort((a, b) => a.joinedTimestamp - b.joinedTimestamp);
     
-    // Convert to array and sort by join timestamp
-    const membersArray = [...guild.members.cache.values()];
-    const sorted = membersArray.sort((a, b) => a.joinedTimestamp - b.joinedTimestamp);
-    
-    // Find index
     const position = sorted.findIndex(m => m.id === member.id);
-    
-    return position + 1; // Array index starts at 0
+    return position + 1;
 }
 
-// Real Data: Trust Score Logic
+// Trust Score Logic
 function buildTrustEmbed(user, member) {
     let score = 0;
     const reasons = [];
 
-    // 1. Account Age (Real timestamp data)
+    // 1. Account Age
     const ageDays = Math.floor((Date.now() - user.createdTimestamp) / (1000 * 60 * 60 * 24));
     if (ageDays > 365) { score += 40; reasons.push('✅ Account older than 1 year (+40)'); }
     else if (ageDays > 30) { score += 20; reasons.push('🟡 Account older than 30 days (+20)'); }
     else { score -= 50; reasons.push('⚠️ Account is very new (-50)'); }
 
-    // 2. Avatar Check (Real avatar data)
+    // 2. Avatar Check
     if (user.avatar) { score += 10; reasons.push('✅ Custom Avatar (+10)'); }
     else { score -= 10; reasons.push('⚠️ Default Avatar (-10)'); }
 
-    // 3. Server Join Age (Real join timestamp)
+    // 3. Server Join Age
     if (member.joinedTimestamp) {
         const joinDays = Math.floor((Date.now() - member.joinedTimestamp) / (1000 * 60 * 60 * 24));
         if (joinDays > 30) { score += 15; reasons.push('✅ Server member for >30 days (+15)'); }
     }
 
-    // 4. Status (Real presence data)
+    // 4. Status
     if (member.presence && member.presence.status !== 'offline') {
         score += 10; reasons.push('✅ Currently Active (+10)');
     }
@@ -341,15 +321,15 @@ function buildTrustEmbed(user, member) {
     score = Math.max(0, Math.min(100, score));
 
     let color = 0x5865F2;
-    if (score > 70) color = 0x57F287; // Green
-    else if (score < 40) color = 0xED4245; // Red
+    if (score > 70) color = 0x57F287;
+    else if (score < 40) color = 0xED4245;
 
     return new EmbedBuilder()
         .setTitle(`🛡️ Trust Analysis: ${user.username}`)
         .setDescription(`**Trust Score: ${score}/100**`)
         .addFields({ name: 'Factors', value: reasons.join('\n') })
         .setColor(color)
-        .setFooter({ text: 'Note: This is an automated estimate based on real data.' });
+        .setFooter({ text: 'Note: Automated estimate based on real data.' });
 }
 
 async function handleRefresh(i, targetUser, interaction, message, viewModes, currentFilter) {
@@ -443,7 +423,8 @@ function buildPermissionsEmbed(interaction, member) {
 // ================== SMART EMBED BUILDER ==================
 
 async function buildSmartEmbed(interaction, targetUser, member, presence, activities, bannerURL, accentColor, viewMode, filter, updateCount) {
-    let color = member.displayHexColor !== '#000000' ? member.displayHexColor : accentColor;
+    // Fix: Ensure color is always valid
+    let color = member.displayHexColor !== '#000000' ? member.displayHexColor : (accentColor || 0x5865F2);
     
     const spotify = activities.find(a => a.name === 'Spotify');
     if (spotify) color = 0x1DB954; // Spotify Green
@@ -461,7 +442,7 @@ async function buildSmartEmbed(interaction, targetUser, member, presence, activi
         
         return new EmbedBuilder()
             .setTitle(`🔬 Deep Scan: ${targetUser.username}`)
-            .setColor(color || 0x5865F2)
+            .setColor(color)
             .setThumbnail(thumbnail)
             .setDescription(`**System Analysis**\n🆔 **ID:** ${targetUser.id}\n📆 **Account Age:** ${ageDays} days old`)
             .addFields(
@@ -544,7 +525,7 @@ async function buildSmartEmbed(interaction, targetUser, member, presence, activi
     const embed = new EmbedBuilder()
         .setTitle(`🛰️ Telemetry: ${targetUser.username}`)
         .setURL(`https://discord.com/users/${targetUser.id}`)
-        .setColor(color || 0x5865F2)
+        .setColor(color)
         .setThumbnail(thumbnail)
         .addFields(fields)
         .setImage(bannerURL)
@@ -559,4 +540,3 @@ function createProgressBar(percent, length = 15) {
     const empty = length - filled;
     return '▇'.repeat(filled) + '—'.repeat(empty);
 }
-```
