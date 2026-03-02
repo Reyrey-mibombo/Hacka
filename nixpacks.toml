@@ -2,13 +2,14 @@
   node = {}
 
 [phases.setup]
-  nixPkgs = ["...", "nodejs"]
+  nixPkgs = ["nodejs"]
 
-[phases.install]
-  cmds = ["npm install"]
+[variables]
+  NIXPACKS_NODE_VERSION = "20"
+  NODE_ENV = "production"
 
 [phases.build]
-  cmds = []
+  cmds = ["npm install"]
 
 [start]
   cmd = "node src/index.js"
