@@ -1,64 +1,81 @@
-﻿const { SlashCommandBuilder } = require('discord.js');
+﻿const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const { createCustomEmbed, createErrorEmbed } = require('../../utils/embeds');
 const { validatePremiumLicense } = require('../../utils/premium_guard');
-const { Activity } = require('../../database/mongo');
+const { Warning } = require('../../database/mongo');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('smart_alerts')
-    .setDescription('Zenith Hyper-Apex: Macroscopic Vector Neutralisation & High-Fidelity Tactical Alerts'),
+    .setDescription('🚨 Real-time smart alert analysis — detect warning spikes and at-risk users from real data'),
 
   async execute(interaction) {
     try {
       await interaction.deferReply();
 
-      // Zenith License Guard
       const license = await validatePremiumLicense(interaction);
       if (!license.allowed) {
         return interaction.editReply({ embeds: [license.embed], components: license.components });
       }
 
       const guildId = interaction.guildId;
-      const alerts = await Activity.find({ guildId, type: 'warning' }).sort({ createdAt: -1 }).limit(3).lean();
+      const now = new Date();
+      const oneDayAgo = new Date(now - 86400000);
+      const sevenDaysAgo = new Date(now - 7 * 86400000);
 
-      // 1. Vector Neutralisation Frame (ASCII)
-      const generateFrame = (content) => {
-        const line = '═'.repeat(content.length + 2);
-        return `╔${line}╗\n║ ${content} ║\n╚${line}╝`;
-      };
+      const [dayWarnings, weekWarnings] = await Promise.all([
+        Warning.find({ guildId, createdAt: { $gte: oneDayAgo } }).lean(),
+        Warning.find({ guildId, createdAt: { $gte: sevenDaysAgo } }).lean()
+      ]);
 
-      const alertLines = alerts.length > 0 ? alerts.map(a => {
-        const type = (a.data?.reason || 'NOMINAL').toUpperCase();
-        const user = a.userId.slice(-5);
-        return `\`[${user}]\` ➔ \`${type}\``;
-      }).join('\n') : '`🟢 NO ACTIVE THREAT VECTORS DETECTED`';
+      // Spike detection: today vs 7-day daily average
+      const weekDailyAvg = weekWarnings.length / 7;
+      const spikeMultiplier = weekDailyAvg > 0 ? (dayWarnings.length / weekDailyAvg).toFixed(1) : 'N/A';
+      const isSpike = weekDailyAvg > 0 && dayWarnings.length > weekDailyAvg * 1.5;
 
-      // 2. Alert Integrity Ribbon
-      const barLength = 12;
-      const status = alerts.length > 2 ? 'RED' : (alerts.length > 0 ? 'YELLOW' : 'GREEN');
-      const filled = status === 'RED' ? '█' : (status === 'YELLOW' ? '▓' : '░');
-      const ribbon = `\`[${filled.repeat(barLength)}]\` **${status} STATUS**`;
+      // At-risk users: 3+ warnings in 24h
+      const userWarnCounts = {};
+      dayWarnings.forEach(w => { userWarnCounts[w.userId] = (userWarnCounts[w.userId] || 0) + 1; });
+      const atRiskUsers = Object.entries(userWarnCounts).filter(([, count]) => count >= 2);
+
+      // Most warned user this week
+      const weekUserCounts = {};
+      weekWarnings.forEach(w => { weekUserCounts[w.userId] = (weekUserCounts[w.userId] || 0) + 1; });
+      const mostWarnedId = Object.entries(weekUserCounts).sort((a, b) => b[1] - a[1])[0];
+
+      // Alert severity
+      const alertLevel = isSpike ? '🔴 **SPIKE DETECTED**' : atRiskUsers.length > 0 ? '🟡 **MODERATE RISK**' : '🟢 **Normal Activity**';
+      const alertColor = isSpike ? 'error' : atRiskUsers.length > 0 ? 'warning' : 'success';
+
+      const atRiskDisplay = atRiskUsers.length > 0
+        ? atRiskUsers.map(([uid, count]) => `• <@${uid}> — \`${count}\` warnings today`).join('\n')
+        : '`No at-risk users detected`';
 
       const embed = await createCustomEmbed(interaction, {
-        title: '📡 Zenith Hyper-Apex: Smart Tactical Alerts',
+        title: `🚨 Smart Alerts — ${interaction.guild.name}`,
         thumbnail: interaction.guild.iconURL({ dynamic: true }),
-        description: `### 🛡️ Macroscopic Threat Neutralisation\nMonitoring active behavioral vectors and network anomalies for sector **${interaction.guild.name}**.\n\n**🎯 ACTIVE VECTORS**\n${alertLines}\n\n**💎 ZENITH HYPER-APEX EXCLUSIVE**`,
+        description: `Real-time warning analysis and spike detection.\n\n**Alert Level:** ${alertLevel}`,
         fields: [
-          { name: '⚖️ Vector Integrity Ribbon', value: ribbon, inline: false },
-          { name: '🛰️ Signal Audit', value: '`FORENSIC-SYNC ACTIVE`', inline: true },
-          { name: '🛡️ Neutraliser', value: '`ZENITH-SHIELD-V7`', inline: true },
-          { name: '🌐 Network Sync', value: '`SYNCHRONIZED`', inline: true },
-          { name: '✨ Intelligence', value: '`DIVINE [APEX]`', inline: true }
+          { name: '⚠️ Warnings Today', value: `\`${dayWarnings.length}\``, inline: true },
+          { name: '📅 Warnings This Week', value: `\`${weekWarnings.length}\``, inline: true },
+          { name: '📊 Daily Average (7d)', value: `\`${weekDailyAvg.toFixed(1)}/day\``, inline: true },
+          { name: '📈 Today vs Average', value: `\`${spikeMultiplier}x\` ${isSpike ? '⚠️ Spike!' : ''}`, inline: true },
+          { name: '🚨 At-Risk Users (2+ today)', value: atRiskDisplay, inline: false },
+          {
+            name: '🏆 Most Warned (7d)',
+            value: mostWarnedId ? `<@${mostWarnedId[0]}> — \`${mostWarnedId[1]}\` warnings` : '`None`',
+            inline: false
+          }
         ],
-        footer: 'Smart Alert Orchestration • V7 Automation Hyper-Apex Suite',
-        color: status === 'RED' ? 'danger' : (status === 'YELLOW' ? 'premium' : 'success')
+        color: alertColor,
+        footer: 'uwu-chan • Enterprise Smart Alerts • Real Warning Data'
       });
 
       await interaction.editReply({ embeds: [embed] });
-
     } catch (error) {
-      console.error('Zenith Smart Alerts Error:', error);
-      await interaction.editReply({ embeds: [createErrorEmbed('Tactical Intelligence failure: Unable to decode neutralisation frames.')] });
+      console.error('[smart_alerts] Error:', error);
+      const errEmbed = createErrorEmbed('Failed to analyze smart alerts.');
+      if (interaction.deferred || interaction.replied) await interaction.editReply({ embeds: [errEmbed] });
+      else await interaction.reply({ embeds: [errEmbed], ephemeral: true });
     }
   }
 };

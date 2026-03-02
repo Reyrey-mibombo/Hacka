@@ -1,65 +1,122 @@
-﻿const { SlashCommandBuilder } = require('discord.js');
-const { createCustomEmbed, createErrorEmbed } = require('../../utils/embeds');
-const { validatePremiumLicense } = require('../../utils/premium_guard');
-const { Activity, User, Guild } = require('../../database/mongo');
+﻿const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
+const { createCustomEmbed, createErrorEmbed, createProgressBar } = require('../../utils/embeds');
+const { Activity, Shift, Warning, User } = require('../../database/mongo');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('analytics_dashboard')
-    .setDescription('Zenith Platinum: Macroscopic Growth Forecasting & AI Dashboards'),
+    .setDescription('📊 Full real-time analytics dashboard with Today/Week/Month views')
+    .addStringOption(opt =>
+      opt.setName('period')
+        .setDescription('Time period to analyze')
+        .addChoices(
+          { name: '📅 Today', value: 'today' },
+          { name: '📆 This Week', value: 'week' },
+          { name: '🗓️ This Month', value: 'month' }
+        )
+        .setRequired(false)
+    ),
 
   async execute(interaction) {
     try {
       await interaction.deferReply();
-
-      // Strict Zenith License Guard
-      const license = await validatePremiumLicense(interaction);
-      if (!license.allowed) {
-        return interaction.editReply({ embeds: [license.embed], components: license.components });
-      }
-
       const guildId = interaction.guildId;
-      const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      let period = interaction.options.getString('period') || 'week';
 
-      const [activities, totalUsers] = await Promise.all([
-        Activity.find({ guildId, createdAt: { $gte: monthAgo } }).lean(),
-        User.countDocuments({ guildId })
-      ]);
+      const embed = await generateDashboard(interaction, guildId, period);
 
-      const messages = activities.filter(a => a.type === 'message').length;
-      const commands = activities.filter(a => a.type === 'command').length;
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('dash_today').setLabel('📅 Today').setStyle(period === 'today' ? ButtonStyle.Primary : ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('dash_week').setLabel('📆 Week').setStyle(period === 'week' ? ButtonStyle.Primary : ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('dash_month').setLabel('🗓️ Month').setStyle(period === 'month' ? ButtonStyle.Primary : ButtonStyle.Secondary)
+      );
 
-      // AI Projection Logic (Zenith exclusive)
-      const projectedGrowth = (messages / 100 * 1.2).toFixed(1);
-      const retentionScore = Math.min(100, (totalUsers / (messages || 1) * 50)).toFixed(1);
+      const msg = await interaction.editReply({ embeds: [embed], components: [row] });
 
-      const embed = await createCustomEmbed(interaction, {
-        title: '📊 Zenith Platinum Executive Hub',
-        thumbnail: interaction.guild.iconURL({ dynamic: true }),
-        description: `### 🔮 Predictive AI Orchestration\nUnified macroscopic data synchronization for sector **${interaction.guild.name}**. Real-time intelligence processing active.\n\n**💎 ZENITH PLATINUM EXCLUSIVE**`,
-        fields: [
-          { name: '📡 Monthly Volume', value: `\`${messages.toLocaleString()}\` Signals`, inline: true },
-          { name: '✅ Operational Pings', value: `\`${commands.toLocaleString()}\` Commands`, inline: true },
-          { name: '👥 Total Node Density', value: `\`${totalUsers}\``, inline: true },
-          { name: '🔮 30D AI Forecast', value: `\`+${projectedGrowth}%\` Growth Potential`, inline: true },
-          { name: '📈 Retention Metric', value: `\`${retentionScore}%\``, inline: true },
-          { name: '⚖️ Data Fidelity', value: '`ULTRA-PREMIUM`', inline: true }
-        ],
-        footer: 'Executive AI Orchestration • V5 Platinum Suite',
-        color: 'enterprise'
+      const collector = msg.createMessageComponentCollector({
+        componentType: ComponentType.Button,
+        filter: i => i.user.id === interaction.user.id,
+        time: 180000
       });
 
-      embed.addFields({
-        name: '🧠 Zenith AI Insight',
-        value: `> Based on current signal metabolics, your sector is projected to reach **${Math.round(totalUsers * (1 + parseFloat(projectedGrowth) / 100))}** nodes by next cycle.`,
-        inline: false
+      collector.on('collect', async i => {
+        await i.deferUpdate();
+        const p = i.customId.replace('dash_', '');
+        const newEmbed = await generateDashboard(interaction, guildId, p);
+        const newRow = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId('dash_today').setLabel('📅 Today').setStyle(p === 'today' ? ButtonStyle.Primary : ButtonStyle.Secondary),
+          new ButtonBuilder().setCustomId('dash_week').setLabel('📆 Week').setStyle(p === 'week' ? ButtonStyle.Primary : ButtonStyle.Secondary),
+          new ButtonBuilder().setCustomId('dash_month').setLabel('🗓️ Month').setStyle(p === 'month' ? ButtonStyle.Primary : ButtonStyle.Secondary)
+        );
+        await i.editReply({ embeds: [newEmbed], components: [newRow] });
       });
 
-      await interaction.editReply({ embeds: [embed] });
-
+      collector.on('end', () => {
+        msg.edit({ components: [] }).catch(() => { });
+      });
     } catch (error) {
-      console.error('Zenith Analytics Error:', error);
-      await interaction.editReply({ embeds: [createErrorEmbed('Executive Hub failure: Unable to synchronize macroscopic data streams.')] });
+      console.error('[analytics_dashboard] Error:', error);
+      const errEmbed = createErrorEmbed('Failed to load analytics dashboard.');
+      if (interaction.deferred || interaction.replied) await interaction.editReply({ embeds: [errEmbed] });
+      else await interaction.reply({ embeds: [errEmbed], ephemeral: true });
     }
   }
 };
+
+async function generateDashboard(interaction, guildId, period) {
+  const now = new Date();
+  let since;
+  let periodLabel;
+
+  if (period === 'today') {
+    since = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    periodLabel = 'Today';
+  } else if (period === 'month') {
+    since = new Date(now - 30 * 86400000);
+    periodLabel = 'Last 30 Days';
+  } else {
+    since = new Date(now - 7 * 86400000);
+    periodLabel = 'Last 7 Days';
+  }
+
+  const [activities, shifts, warnings] = await Promise.all([
+    Activity.find({ guildId, createdAt: { $gte: since } }).lean(),
+    Shift.find({ guildId, startTime: { $gte: since }, endTime: { $ne: null } }).lean(),
+    Warning.find({ guildId, createdAt: { $gte: since } }).lean()
+  ]);
+
+  const commands = activities.filter(a => a.type === 'command').length;
+  const activeUsers = new Set(activities.map(a => a.userId)).size;
+  const promotions = activities.filter(a => a.type === 'promotion').length;
+  const totalShiftTime = shifts.reduce((s, sh) => s + (sh.duration || 0), 0);
+  const shiftHours = Math.floor(totalShiftTime / 3600);
+  const memberCount = interaction.guild.memberCount;
+  const engagePct = Math.round((activeUsers / Math.max(memberCount, 1)) * 100);
+  const engageBar = createProgressBar(engagePct);
+
+  // Top command user
+  const cmdByUser = {};
+  activities.filter(a => a.type === 'command').forEach(a => {
+    cmdByUser[a.userId] = (cmdByUser[a.userId] || 0) + 1;
+  });
+  const topUserId = Object.entries(cmdByUser).sort((a, b) => b[1] - a[1])[0]?.[0];
+  const topUserObj = topUserId ? await interaction.client.users.fetch(topUserId).catch(() => null) : null;
+  const topUserStr = topUserObj ? `**${topUserObj.username}** — \`${cmdByUser[topUserId]} cmds\`` : '`No data yet`';
+
+  return createCustomEmbed(interaction, {
+    title: `📊 Analytics Dashboard — ${periodLabel}`,
+    thumbnail: interaction.guild.iconURL({ dynamic: true }),
+    description: `Real-time analytics for **${interaction.guild.name}**.`,
+    fields: [
+      { name: '⚡ Commands Run', value: `\`${commands.toLocaleString()}\``, inline: true },
+      { name: '👥 Active Users', value: `\`${activeUsers}\``, inline: true },
+      { name: '🔄 Shifts Done', value: `\`${shifts.length}\` (\`${shiftHours}h\`)`, inline: true },
+      { name: '⚠️ Warnings', value: `\`${warnings.length}\``, inline: true },
+      { name: '📈 Promotions', value: `\`${promotions}\``, inline: true },
+      { name: '📊 Engagement Rate', value: `\`${engageBar}\` **${engagePct}%**`, inline: false },
+      { name: '🏆 Top User', value: topUserStr, inline: false }
+    ],
+    color: 'premium',
+    footer: `uwu-chan • Premium Analytics • ${periodLabel}`
+  });
+}

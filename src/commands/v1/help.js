@@ -1,55 +1,142 @@
-﻿const { SlashCommandBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
-const { createCoolEmbed, createErrorEmbed, createCustomEmbed } = require('../../utils/embeds');
+﻿const { SlashCommandBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { createCustomEmbed, createErrorEmbed, createTierEmbed } = require('../../utils/embeds');
+
+const CATEGORIES = {
+  general: {
+    emoji: '📋',
+    label: 'General Utilities',
+    description: 'Core commands available to everyone',
+    commands: [
+      { name: '/ping', desc: 'System telemetry, latency & resource monitoring' },
+      { name: '/help', desc: 'This help menu' },
+      { name: '/server_status', desc: 'Real-time server statistics' },
+      { name: '/invite_link', desc: 'Get the bot invite link' },
+      { name: '/report_issue', desc: 'Report an issue to the developers' }
+    ]
+  },
+  staff: {
+    emoji: '👥',
+    label: 'Staff & Shifts',
+    description: 'Staff management and shift tracking',
+    commands: [
+      { name: '/shift_start', desc: 'Start your duty shift' },
+      { name: '/shift_end', desc: 'End your current shift + earn points' },
+      { name: '/staff_profile', desc: 'View staff profile with stats chart' },
+      { name: '/leaderboard', desc: 'Real-time points leaderboard' },
+      { name: '/promote', desc: 'Promote a staff member' },
+      { name: '/demote', desc: 'Demote a staff member' },
+      { name: '/staff_stats', desc: 'Detailed staff statistics' },
+      { name: '/check_activity', desc: 'Deep-scan user presence & activity' }
+    ]
+  },
+  analytics: {
+    emoji: '📊',
+    label: 'Analytics',
+    description: 'Server and staff performance data',
+    commands: [
+      { name: '/activity_chart', desc: 'Visual activity trend chart' },
+      { name: '/daily_summary', desc: 'Daily activity summary' },
+      { name: '/monthly_summary', desc: 'Monthly performance summary' },
+      { name: '/server_growth', desc: 'Server member growth stats' },
+      { name: '/shift_leaderboard', desc: 'Top shift performers' }
+    ]
+  },
+  moderation: {
+    emoji: '🛡️',
+    label: 'Moderation',
+    description: 'Server moderation tools',
+    commands: [
+      { name: '/warn', desc: 'Issue a warning with severity & DM' },
+      { name: '/case_file', desc: 'View a user\'s full case file' },
+      { name: '/ticketSetup', desc: 'Configure the ticket system' },
+      { name: '/ticketLogs', desc: 'View ticket history' }
+    ]
+  },
+  premium: {
+    emoji: '💎',
+    label: 'Premium & Enterprise',
+    description: 'Unlock advanced features',
+    commands: [
+      { name: '/buy', desc: 'View pricing and upgrade now' },
+      { name: 'Premium (v3-v5)', desc: '29 commands: analytics, roles, automation' },
+      { name: 'Enterprise (v6-v8)', desc: '102 commands: AI insights, visual dashboards, automation' }
+    ]
+  }
+};
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('help')
-    .setDescription('Get help and command list')
-    .addStringOption(opt => opt.setName('command').setDescription('Get help for a specific command').setRequired(false)),
+    .setDescription('📚 Interactive command directory — browse all available features')
+    .addStringOption(opt =>
+      opt.setName('command')
+        .setDescription('Get details for a specific command')
+        .setRequired(false)
+    ),
 
   async execute(interaction) {
     try {
       const commandName = interaction.options.getString('command');
 
       if (commandName) {
-        // Detailed help for specific command
-        const embed = createCoolEmbed()
-          .setTitle(`Help: /${commandName}`)
-          .setDescription(`Showing details for the \`${commandName}\` command. Please note some features require higher tiers.`);
+        const embed = createTierEmbed('free', {
+          title: `Help: /${commandName}`,
+          description: `Showing details for the \`${commandName}\` command.\nSome features require a higher license tier — use \`/buy\` to upgrade.`,
+          footer: 'uwu-chan • Type /help to see all categories'
+        });
         return interaction.reply({ embeds: [embed], ephemeral: true });
       }
 
-      // Categorized broad help menu
-      const embed = await createCustomEmbed(interaction, {
-        title: '📚 Uwu-chan Command Index',
-        description: 'Welcome to the core service manual. Select a category below to explore available features for your current licensing tier.',
-        thumbnail: interaction.client.user?.displayAvatarURL(),
-        fields: [
-          { name: '📋 General Utilities', value: '> `/ping` • `/server_status`\n> `/roles_list` • `/help`\n> `/invite_link` • `/report_issue`', inline: false },
-          { name: '👥 Staff & Shifts', value: '> `/staff_profile` • `/leaderboard`\n> `/shift_start` • `/shift_end`', inline: false },
-          { name: '📊 Analytics', value: '> `/staff_stats` • `/daily_summary`\n> `/activity_chart`', inline: false },
-          { name: '🛡️ Moderation', value: '> `/warn` • `/mod_notes`\n> `/promote` • `/demote`', inline: false },
-          { name: '💎 Premium Tiers', value: 'Use `/premium` to unlock v3 (Advanced Auto-Moderation), v4 (Economy), v5 (AI Features), and beyond!', inline: false }
-        ]
+      const category = 'general';
+      const embed = await buildCategoryEmbed(interaction, category);
+
+      const selectRow = new ActionRowBuilder().addComponents(
+        new StringSelectMenuBuilder()
+          .setCustomId('help_category_select')
+          .setPlaceholder('📂 Browse a command category...')
+          .addOptions(
+            Object.entries(CATEGORIES).map(([key, cat]) => ({
+              label: cat.label,
+              description: cat.description,
+              value: key,
+              emoji: cat.emoji
+            }))
+          )
+      );
+
+      const buttonRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setLabel('🛒 Upgrade')
+          .setStyle(ButtonStyle.Link)
+          .setURL('https://discord.gg/uwuchan'),
+        new ButtonBuilder()
+          .setLabel('📖 GitHub')
+          .setStyle(ButtonStyle.Link)
+          .setURL('https://github.com/Reyrey-mibombo/uwu-chan-saas')
+      );
+
+      const msg = await interaction.reply({ embeds: [embed], components: [selectRow, buttonRow], fetchReply: true });
+
+      const collector = msg.createMessageComponentCollector({ time: 120000 });
+      collector.on('collect', async i => {
+        if (i.user.id !== interaction.user.id) {
+          return i.reply({ content: '❌ This menu is not for you.', ephemeral: true });
+        }
+        if (i.customId === 'help_category_select') {
+          await i.deferUpdate();
+          const newEmbed = await buildCategoryEmbed(interaction, i.values[0]);
+          await i.editReply({ embeds: [newEmbed], components: [selectRow, buttonRow] });
+        }
       });
 
-      const row = new ActionRowBuilder()
-        .addComponents(
-          new StringSelectMenuBuilder()
-            .setCustomId('help_category_select')
-            .setPlaceholder('Select a category for more details')
-            .addOptions([
-              { label: 'General', description: 'Basic utility commands', value: 'general', emoji: '📋' },
-              { label: 'Staff Management', description: 'Shift and profile commands', value: 'staff', emoji: '👥' },
-              { label: 'Analytics', description: 'Server and staff statistics', value: 'analytics', emoji: '📊' },
-              { label: 'Moderation', description: 'Server management commands', value: 'moderation', emoji: '🛡️' }
-            ])
-        );
+      collector.on('end', () => {
+        // Silently expire
+        msg.edit({ components: [buttonRow] }).catch(() => { });
+      });
 
-      await interaction.reply({ embeds: [embed], components: [row] });
     } catch (error) {
-      console.error(error);
-      const errEmbed = createErrorEmbed('An error occurred while fetching the help menu.');
+      console.error('[help] Error:', error);
+      const errEmbed = createErrorEmbed('An error occurred while loading the help menu.');
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply({ embeds: [errEmbed] });
       } else {
@@ -58,3 +145,23 @@ module.exports = {
     }
   }
 };
+
+async function buildCategoryEmbed(interaction, categoryKey) {
+  const cat = CATEGORIES[categoryKey] || CATEGORIES.general;
+
+  const commandList = cat.commands
+    .map(c => `**${c.name}** — ${c.desc}`)
+    .join('\n');
+
+  return createCustomEmbed(interaction, {
+    title: `${cat.emoji} ${cat.label}`,
+    description: `${cat.description}\n\n${commandList}`,
+    thumbnail: interaction.client.user?.displayAvatarURL(),
+    fields: [
+      { name: '📌 Commands Available', value: `\`${cat.commands.length}\` in this category`, inline: true },
+      { name: '📂 Total Categories', value: `\`${Object.keys(CATEGORIES).length}\` categories`, inline: true }
+    ],
+    footer: `uwu-chan Help • Use /buy to unlock Premium & Enterprise`,
+    color: 'primary'
+  });
+}

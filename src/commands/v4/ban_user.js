@@ -1,85 +1,106 @@
-﻿const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
-const { createPremiumEmbed } = require('../../utils/embeds');
+﻿const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { createCustomEmbed, createErrorEmbed } = require('../../utils/embeds');
+const { Activity, Warning } = require('../../database/mongo');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('ban_user')
-    .setDescription('Ban a user from the server')
-    .addUserOption(option => 
-      option.setName('user')
-        .setDescription('User to ban')
-        .setRequired(true))
-    .addStringOption(option => 
-      option.setName('reason')
-        .setDescription('Reason for ban')
-        .setRequired(true))
-    .addIntegerOption(option =>
-      option.setName('days')
-        .setDescription('Number of days to delete messages (0-7)')
-        .setMinValue(0)
-        .setMaxValue(7)
-        .setRequired(false))
+    .setDescription('🔨 Ban a member from this server with reason, DM, and audit log')
+    .addUserOption(opt => opt.setName('user').setDescription('User to ban').setRequired(true))
+    .addStringOption(opt => opt.setName('reason').setDescription('Reason for the ban').setRequired(false))
+    .addIntegerOption(opt =>
+      opt.setName('delete_days')
+        .setDescription('Delete this many days of messages (0-7)')
+        .setMinValue(0).setMaxValue(7)
+        .setRequired(false)
+    )
     .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
 
-  async execute(interaction, client) {
-    const target = interaction.options.getUser('user');
-    const reason = interaction.options.getString('reason');
-    const deleteDays = interaction.options.getInteger('days') || 0;
-    const guild = interaction.guild;
-
-    if (target.id === interaction.user.id) {
-      return interaction.reply({ content: 'You cannot ban yourself!', ephemeral: true });
-    }
-
-    if (target.id === guild.ownerId) {
-      return interaction.reply({ content: 'You cannot ban the server owner!', ephemeral: true });
-    }
-
-    const member = await guild.members.fetch(target.id).catch(() => null);
-    if (member) {
-      if (member.roles.highest.position >= interaction.member.roles.highest.position && guild.ownerId !== interaction.user.id) {
-        return interaction.reply({ content: 'You cannot ban someone with equal or higher role!', ephemeral: true });
-      }
-    }
-
+  async execute(interaction) {
     try {
-      await guild.bans.create(target.id, { 
-        reason: `${reason} | Banned by ${interaction.user.username}`,
-        deleteMessageDays: deleteDays
+      await interaction.deferReply();
+      const target = interaction.options.getUser('user');
+      const reason = interaction.options.getString('reason') || 'No reason provided';
+      const deleteDays = interaction.options.getInteger('delete_days') ?? 0;
+
+      if (!interaction.member.permissions.has(PermissionFlagsBits.BanMembers)) {
+        return interaction.editReply({ embeds: [createErrorEmbed('You lack the `Ban Members` permission.')] });
+      }
+
+      const member = await interaction.guild.members.fetch(target.id).catch(() => null);
+
+      if (!member) {
+        // User may still be bannable even if not in server
+        try {
+          await interaction.guild.bans.create(target.id, { reason: `${reason} | By: ${interaction.user.tag}`, deleteMessageDays: deleteDays });
+        } catch (e) {
+          return interaction.editReply({ embeds: [createErrorEmbed(`Could not ban **${target.username}**. They may not be in the server or I lack permissions.`)] });
+        }
+      } else {
+        if (!member.bannable) {
+          return interaction.editReply({ embeds: [createErrorEmbed(`I cannot ban **${target.username}**. Their role is higher than mine.`)] });
+        }
+
+        // DM the user before banning
+        let dmStatus = '✅ DM Sent';
+        try {
+          const dmEmbed = createErrorEmbed(`You have been **banned** from **${interaction.guild.name}**.\n**Reason:** ${reason}\n**Moderator:** ${interaction.user.tag}`);
+          dmEmbed.setTitle('🔨 You were banned');
+          await target.send({ embeds: [dmEmbed] });
+        } catch { dmStatus = '❌ Could not DM (DMs closed)'; }
+
+        await member.ban({ reason: `${reason} | By: ${interaction.user.tag}`, deleteMessageDays: deleteDays });
+      }
+
+      // Log to Activity collection
+      await Activity.create({
+        guildId: interaction.guildId,
+        userId: target.id,
+        type: 'warning',
+        data: { action: 'ban', reason, moderatorId: interaction.user.id },
+        createdAt: new Date()
+      }).catch(() => { });
+
+      // Log to mod channel
+      const { Guild } = require('../../database/mongo');
+      const guildData = await Guild.findOne({ guildId: interaction.guildId }).lean();
+      if (guildData?.settings?.logChannel) {
+        const logChannel = interaction.guild.channels.cache.get(guildData.settings.logChannel);
+        if (logChannel) {
+          const logEmbed = createCustomEmbed(interaction, {
+            title: '🔨 Member Banned',
+            fields: [
+              { name: '👤 Banned User', value: `**${target.username}** (\`${target.id}\`)`, inline: true },
+              { name: '🛡️ Moderator', value: `**${interaction.user.username}**`, inline: true },
+              { name: '📝 Reason', value: reason, inline: false }
+            ],
+            color: 'error'
+          });
+          logChannel.send({ embeds: [await logEmbed] }).catch(() => { });
+        }
+      }
+
+      const embed = await createCustomEmbed(interaction, {
+        title: '🔨 User Banned',
+        thumbnail: target.displayAvatarURL({ dynamic: true }),
+        description: `**${target.username}** has been permanently banned from **${interaction.guild.name}**.`,
+        fields: [
+          { name: '👤 Banned User', value: `**${target.username}** (\`${target.id}\`)`, inline: true },
+          { name: '🛡️ Moderator', value: `**${interaction.user.username}**`, inline: true },
+          { name: '📝 Reason', value: reason, inline: false },
+          { name: '🗑️ Messages Deleted', value: `\`${deleteDays}\` day(s)`, inline: true },
+          { name: '📬 DM Status', value: `\`${dmStatus || '✅'}\``, inline: true }
+        ],
+        color: 'error',
+        footer: 'uwu-chan • Moderation Log'
       });
 
-      const modSystem = client.systems.moderation;
-      await modSystem.createCase(guild.id, target.id, 'ban', reason, interaction.user.id);
-
-      const embed = createPremiumEmbed()
-        .setTitle('🔨 User Banned')
-        
-        .addFields(
-          { name: '👤 User', value: `${target.tag} (${target.id})`, inline: true },
-          { name: '📋 Reason', value: reason, inline: true },
-          { name: '🗑️ Messages Deleted', value: `${deleteDays} days`, inline: true }
-        )
-        
-        ;
-
-      await interaction.reply({ embeds: [embed] });
-
-      const logChannel = guild.channels.cache.find(c => 
-        c.name.includes('mod') || c.name.includes('log')
-      );
-      if (logChannel) {
-        await logChannel.send({ embeds: [embed] });
-      }
-
-      try {
-        await target.send(`🔨 You have been banned from **${guild.name}**\n📋 Reason: ${reason}`);
-      } catch (e) {}
-
+      await interaction.editReply({ embeds: [embed] });
     } catch (error) {
-      await interaction.reply({ content: `Failed to ban user: ${error.message}`, ephemeral: true });
+      console.error('[ban_user] Error:', error);
+      const errEmbed = createErrorEmbed('Failed to execute ban. Check bot permissions.');
+      if (interaction.deferred || interaction.replied) await interaction.editReply({ embeds: [errEmbed] });
+      else await interaction.reply({ embeds: [errEmbed], ephemeral: true });
     }
   }
 };
-
-
-

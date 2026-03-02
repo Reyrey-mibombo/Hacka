@@ -1,113 +1,98 @@
-﻿const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
-const { createPremiumEmbed } = require('../../utils/embeds');
-const { Guild } = require('../../database/mongo');
+﻿const { SlashCommandBuilder, PermissionFlagsBits, StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
+const { createCustomEmbed, createErrorEmbed } = require('../../utils/embeds');
+const { Activity } = require('../../database/mongo');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('mute_user')
-    .setDescription('Mute a user')
-    .addUserOption(option => 
-      option.setName('user')
-        .setDescription('User to mute')
-        .setRequired(true))
-    .addStringOption(option => 
-      option.setName('reason')
-        .setDescription('Reason for mute')
-        .setRequired(true))
-    .addIntegerOption(option =>
-      option.setName('duration')
-        .setDescription('Duration in minutes')
-        .setMinValue(1)
-        .setRequired(false))
+    .setDescription('🔇 Timeout/mute a member using Discord native timeout API')
+    .addUserOption(opt => opt.setName('user').setDescription('User to mute').setRequired(true))
+    .addStringOption(opt =>
+      opt.setName('duration')
+        .setDescription('Mute duration')
+        .addChoices(
+          { name: '1 Minute', value: '60000' },
+          { name: '5 Minutes', value: '300000' },
+          { name: '10 Minutes', value: '600000' },
+          { name: '30 Minutes', value: '1800000' },
+          { name: '1 Hour', value: '3600000' },
+          { name: '6 Hours', value: '21600000' },
+          { name: '24 Hours', value: '86400000' },
+          { name: '1 Week', value: '604800000' }
+        )
+        .setRequired(true)
+    )
+    .addStringOption(opt => opt.setName('reason').setDescription('Reason for mute').setRequired(false))
     .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
 
-  async execute(interaction, client) {
-    const target = interaction.options.getUser('user');
-    const reason = interaction.options.getString('reason');
-    const duration = interaction.options.getInteger('duration') || 60;
-    const guild = interaction.guild;
-
-    const member = await guild.members.fetch(target.id).catch(() => null);
-    if (!member) {
-      return interaction.reply({ content: 'User is not in the server!', ephemeral: true });
-    }
-
-    if (target.id === interaction.user.id) {
-      return interaction.reply({ content: 'You cannot mute yourself!', ephemeral: true });
-    }
-
-    const guildData = await Guild.findOne({ guildId: guild.id });
-    const mutedRoleId = guildData?.settings?.mutedRole;
-
-    let mutedRole = mutedRoleId ? guild.roles.cache.get(mutedRoleId) : null;
-    
-    if (!mutedRole) {
-      mutedRole = await guild.roles.create({
-        name: 'Muted',
-        color: '#808080',
-        reason: 'Created muted role for moderation'
-      });
-      
-      for (const channel of guild.channels.cache.values()) {
-        try {
-          await channel.permissionOverwrites.create(mutedRole, {
-            SendMessages: false,
-            Speak: false,
-            AddReactions: false
-          });
-        } catch (e) {}
-      }
-
-      if (guildData) {
-        guildData.settings.mutedRole = mutedRole.id;
-        await guildData.save();
-      }
-    }
-
+  async execute(interaction) {
     try {
-      await member.roles.add(mutedRole);
+      await interaction.deferReply();
+      const target = interaction.options.getUser('user');
+      const durationMs = parseInt(interaction.options.getString('duration'));
+      const reason = interaction.options.getString('reason') || 'No reason provided';
 
-      const modSystem = client.systems.moderation;
-      await modSystem.createCase(guild.id, target.id, 'mute', reason, interaction.user.id);
-
-      const timeString = duration >= 60 ? `${duration / 60} hour(s)` : `${duration} minute(s)`;
-
-      const embed = createPremiumEmbed()
-        .setTitle('🔇 User Muted')
-        
-        .addFields(
-          { name: '👤 User', value: target.tag, inline: true },
-          { name: '📋 Reason', value: reason, inline: true },
-          { name: '⏱️ Duration', value: timeString, inline: true }
-        )
-        
-        ;
-
-      await interaction.reply({ embeds: [embed] });
-
-      try {
-        await target.send(`🔇 You have been muted in **${guild.name}**\n📋 Reason: ${reason}\n⏱️ Duration: ${timeString}`);
-      } catch (e) {}
-
-      if (duration > 0) {
-        setTimeout(async () => {
-          try {
-            if (member.roles.cache.has(mutedRole.id)) {
-              await member.roles.remove(mutedRole);
-              const logChannel = guild.channels.cache.find(c => c.name.includes('mod'));
-              if (logChannel) {
-                await logChannel.send(`🔊 ${target.tag} has been unmuted (timeout ended)`);
-              }
-            }
-          } catch (e) {}
-        }, duration * 60 * 1000);
+      if (!interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
+        return interaction.editReply({ embeds: [createErrorEmbed('You lack the `Moderate Members` permission.')] });
       }
 
+      const member = await interaction.guild.members.fetch(target.id).catch(() => null);
+      if (!member) return interaction.editReply({ embeds: [createErrorEmbed('User not found in this server.')] });
+      if (!member.moderatable) return interaction.editReply({ embeds: [createErrorEmbed(`I cannot mute **${target.username}** — their role is higher than mine.`)] });
+
+      // Apply real Discord timeout
+      await member.timeout(durationMs, `${reason} | By: ${interaction.user.tag}`);
+
+      // Log to Activity
+      await Activity.create({
+        guildId: interaction.guildId,
+        userId: target.id,
+        type: 'warning',
+        data: { action: 'mute', durationMs, reason, moderatorId: interaction.user.id },
+        createdAt: new Date()
+      }).catch(() => { });
+
+      // DM the user
+      let dmStatus = '✅ DM Sent';
+      try {
+        const dmEmbed = createCustomEmbed(interaction, {
+          title: '🔇 You have been muted',
+          description: `You were timed out in **${interaction.guild.name}**.\n**Reason:** ${reason}\n**Duration:** ${formatDuration(durationMs)}\n**Moderator:** ${interaction.user.tag}`,
+          color: 'warning'
+        });
+        await target.send({ embeds: [await dmEmbed] });
+      } catch { dmStatus = '❌ DMs closed'; }
+
+      const embed = await createCustomEmbed(interaction, {
+        title: '🔇 User Muted',
+        thumbnail: target.displayAvatarURL({ dynamic: true }),
+        description: `**${target.username}** has been timed out in **${interaction.guild.name}**.`,
+        fields: [
+          { name: '👤 User', value: `**${target.username}** (\`${target.id}\`)`, inline: true },
+          { name: '🛡️ Moderator', value: `**${interaction.user.username}**`, inline: true },
+          { name: '⏱️ Duration', value: `\`${formatDuration(durationMs)}\``, inline: true },
+          { name: '🔓 Unmuted At', value: `<t:${Math.floor((Date.now() + durationMs) / 1000)}:f>`, inline: true },
+          { name: '📝 Reason', value: reason, inline: false },
+          { name: '📬 DM Status', value: `\`${dmStatus}\``, inline: true }
+        ],
+        color: 'warning',
+        footer: 'uwu-chan • Moderation Log'
+      });
+
+      await interaction.editReply({ embeds: [embed] });
     } catch (error) {
-      await interaction.reply({ content: `Failed to mute user: ${error.message}`, ephemeral: true });
+      console.error('[mute_user] Error:', error);
+      const errEmbed = createErrorEmbed('Failed to mute user. Check my permissions.');
+      if (interaction.deferred || interaction.replied) await interaction.editReply({ embeds: [errEmbed] });
+      else await interaction.reply({ embeds: [errEmbed], ephemeral: true });
     }
   }
 };
 
-
-
+function formatDuration(ms) {
+  const s = ms / 1000;
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.round(s / 60)}m`;
+  if (s < 86400) return `${Math.round(s / 3600)}h`;
+  return `${Math.round(s / 86400)}d`;
+}

@@ -1,56 +1,89 @@
 ﻿const { SlashCommandBuilder } = require('discord.js');
-const { createCustomEmbed, createErrorEmbed } = require('../../utils/embeds');
-const { Activity, Shift, User } = require('../../database/mongo');
+const { createCustomEmbed, createErrorEmbed, createProgressBar } = require('../../utils/embeds');
+const { Activity, Shift, Warning, User } = require('../../database/mongo');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('weekly_report')
-    .setDescription('View an authentic algorithmic weekly staff report'),
+    .setDescription('📅 Full weekly performance report — shifts, points, warnings, promotions'),
 
   async execute(interaction) {
     try {
       await interaction.deferReply();
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const guildId = interaction.guildId;
+      const now = new Date();
+      const sevenDaysAgo = new Date(now - 7 * 86400000);
+      const fourteenDaysAgo = new Date(now - 14 * 86400000);
 
-      const [shifts, activities, users] = await Promise.all([
-        Shift.find({ guildId: interaction.guildId, createdAt: { $gte: sevenDaysAgo } }).lean(),
-        Activity.find({ guildId: interaction.guildId, createdAt: { $gte: sevenDaysAgo } }).lean(),
-        User.find({ guildId: interaction.guildId, 'staff.points': { $gt: 0 } }).lean()
+      // Fetch current week and previous week in parallel
+      const [
+        thisWeekActs, lastWeekActs,
+        thisWeekShifts, lastWeekShifts,
+        thisWeekWarnings,
+        topUsers
+      ] = await Promise.all([
+        Activity.find({ guildId, createdAt: { $gte: sevenDaysAgo } }).lean(),
+        Activity.find({ guildId, createdAt: { $gte: fourteenDaysAgo, $lt: sevenDaysAgo } }).lean(),
+        Shift.find({ guildId, startTime: { $gte: sevenDaysAgo }, endTime: { $ne: null } }).lean(),
+        Shift.find({ guildId, startTime: { $gte: fourteenDaysAgo, $lt: sevenDaysAgo }, endTime: { $ne: null } }).lean(),
+        Warning.find({ guildId, createdAt: { $gte: sevenDaysAgo } }).lean(),
+        User.find({ userId: { $exists: true }, 'staff.points': { $gt: 0 } })
+          .sort({ 'staff.points': -1 })
+          .limit(3)
+          .lean()
       ]);
 
-      if (shifts.length === 0 && activities.length === 0) {
-        return interaction.editReply({ embeds: [createErrorEmbed('No recorded activity found over the last 7 days within this server.')] });
-      }
+      // Analytics
+      const cmdCount = thisWeekActs.filter(a => a.type === 'command').length;
+      const lastCmdCount = lastWeekActs.filter(a => a.type === 'command').length;
+      const activeUsers = new Set(thisWeekActs.map(a => a.userId)).size;
 
-      const activeStaff = new Set(shifts.map(s => s.userId)).size;
-      const totalHours = shifts.reduce((acc, s) => acc + (s.duration || 0), 0) / 3600;
-      const avgHours = activeStaff > 0 ? (totalHours / activeStaff).toFixed(1) : 0;
+      const shiftTime = thisWeekShifts.reduce((s, sh) => s + (sh.duration || 0), 0);
+      const lastShiftTime = lastWeekShifts.reduce((s, sh) => s + (sh.duration || 0), 0);
+
+      const cmdDelta = lastCmdCount > 0 ? ((cmdCount - lastCmdCount) / lastCmdCount * 100).toFixed(1) : '∞';
+      const shiftDelta = lastShiftTime > 0 ? ((shiftTime - lastShiftTime) / lastShiftTime * 100).toFixed(1) : '∞';
+      const cmdArrow = parseFloat(cmdDelta) > 0 ? '📈' : (parseFloat(cmdDelta) < 0 ? '📉' : '➡️');
+      const shiftArrow = parseFloat(shiftDelta) > 0 ? '📈' : (parseFloat(shiftDelta) < 0 ? '📉' : '➡️');
+
+      const shiftHours = Math.floor(shiftTime / 3600);
+      const shiftMins = Math.floor((shiftTime % 3600) / 60);
+
+      // Top performers
+      const topList = topUsers.length > 0
+        ? await Promise.all(topUsers.map(async (u, i) => {
+          const medals = ['🥇', '🥈', '🥉'];
+          let username = u.username || `User ${u.userId}`;
+          const pts = u.staff?.points || 0;
+          return `${medals[i]} **${username}** — \`${pts.toLocaleString()} pts\``;
+        }))
+        : ['*No data yet.*'];
+
+      // Activity bar
+      const actBar = createProgressBar(Math.min(100, Math.round((activeUsers / Math.max(interaction.guild.memberCount, 1)) * 100)), 15);
 
       const embed = await createCustomEmbed(interaction, {
-        title: '📊 Macroscopic Operational Intelligence',
-        description: `### 🛡️ 7-Day Staff Economy Breakdown\nStrategic performance analysis and resource allocation metrics for the **${interaction.guild.name}** sector. Aggregating multi-node telemetry.`,
+        title: `📅 Weekly Report — ${interaction.guild.name}`,
         thumbnail: interaction.guild.iconURL({ dynamic: true }),
+        description: `Performance summary for the week of **<t:${Math.floor(sevenDaysAgo.getTime() / 1000)}:D>** → **<t:${Math.floor(now.getTime() / 1000)}:D>**`,
         fields: [
-          { name: '👤 Workforce Capacity', value: `\`${activeStaff.toLocaleString()}\` Active Personnel`, inline: true },
-          { name: '🔄 Operational Throughput', value: `\`${shifts.length.toLocaleString()}\` Patrols Cast`, inline: true },
-          { name: '⏱️ Average Time Yield', value: `\`${avgHours}h\` / Personnel`, inline: true },
-          { name: '📋 Sector Transactions', value: `\`${activities.length.toLocaleString()}\` Logged Events`, inline: true },
-          { name: '💰 Registered Data Profiles', value: `\`${users.length.toLocaleString()}\` Staff Entities`, inline: true }
+          { name: '⚡ Commands Executed', value: `\`${cmdCount.toLocaleString()}\` ${cmdArrow} \`${cmdDelta}%\` vs last week`, inline: true },
+          { name: '🔄 Shifts Completed', value: `\`${thisWeekShifts.length}\` shifts • \`${shiftHours}h ${shiftMins}m\` ${shiftArrow} \`${shiftDelta}%\``, inline: true },
+          { name: '⚠️ Warnings Issued', value: `\`${thisWeekWarnings.length}\` warnings`, inline: true },
+          { name: '👥 Active Staff', value: `\`${actBar}\` **${activeUsers}** users active`, inline: false },
+          { name: '🏆 Top Performers', value: topList.join('\n'), inline: false },
+          { name: '📌 Week Summary', value: `\`${thisWeekActs.length}\` total events tracked this week`, inline: false }
         ],
-        footer: 'Intelligence is sandboxed to the current localized guild environment.',
-        color: 'premium'
+        color: '#5865F2',
+        footer: 'uwu-chan • Weekly Report • Real DB Data'
       });
 
       await interaction.editReply({ embeds: [embed] });
-
     } catch (error) {
-      console.error('Weekly Report Error:', error);
-      const errEmbed = createErrorEmbed('An error occurred while attempting to assemble the weekly report.');
-      if (interaction.deferred || interaction.replied) {
-        await interaction.editReply({ embeds: [errEmbed] });
-      } else {
-        await interaction.reply({ embeds: [errEmbed], ephemeral: true });
-      }
+      console.error('[weekly_report] Error:', error);
+      const errEmbed = createErrorEmbed('Failed to generate weekly report.');
+      if (interaction.deferred || interaction.replied) await interaction.editReply({ embeds: [errEmbed] });
+      else await interaction.reply({ embeds: [errEmbed], ephemeral: true });
     }
   }
 };

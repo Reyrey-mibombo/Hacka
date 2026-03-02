@@ -1,73 +1,97 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { createCustomEmbed, createErrorEmbed } = require('../../utils/embeds');
+const { createCustomEmbed, createErrorEmbed, createProgressBar } = require('../../utils/embeds');
 const { validatePremiumLicense } = require('../../utils/premium_guard');
-const { User } = require('../../database/mongo');
+const { User, Shift } = require('../../database/mongo');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('zenith_passport')
-        .setDescription('Zenith Hyper-Apex: The Definitive Divine Personnel Passport & Holographic Identity')
-        .addUserOption(opt => opt.setName('user').setDescription('Personnel to audit (Optional)').setRequired(false)),
+        .setDescription('💎 Zenith Divine Identity Passport — complete holographic staff profile with real shift history')
+        .addUserOption(opt => opt.setName('user').setDescription('Staff member to view').setRequired(false)),
 
     async execute(interaction) {
         try {
             await interaction.deferReply();
 
-            // Zenith Hyper-Apex License Guard
             const license = await validatePremiumLicense(interaction);
             if (!license.allowed) {
                 return interaction.editReply({ embeds: [license.embed], components: license.components });
             }
 
             const target = interaction.options.getUser('user') || interaction.user;
-            const user = await User.findOne({ userId: target.id, guildId: interaction.guildId }).lean();
+            const guildId = interaction.guildId;
+
+            const [user, recentShifts] = await Promise.all([
+                User.findOne({ userId: target.id, 'guilds.guildId': guildId }).lean(),
+                Shift.find({ userId: target.id, guildId, endTime: { $ne: null } })
+                    .sort({ startTime: -1 }).limit(5).lean()
+            ]);
 
             if (!user || !user.staff) {
-                return interaction.editReply({ embeds: [createErrorEmbed(`No personnel trace found for <@${target.id}>.`)] });
+                return interaction.editReply({ embeds: [createErrorEmbed(`No staff record found for <@${target.id}>. They must use the bot first.`)] });
             }
 
-            const pts = user.staff.points || 0;
-            const level = Math.floor(pts / 100);
-            const mastery = user.staff.mastery || {};
+            const staff = user.staff;
+            const pts = staff.points || 0;
+            const level = staff.level || 1;
+            const rank = (staff.rank || 'Member').toUpperCase();
+            const consistency = staff.consistency || 100;
+            const reputation = staff.reputation || 0;
+            const achievements = staff.achievements || [];
+            const streak = staff.streak || 0;
 
-            // 1. Holographic Identity Ribbon (ASCII)
+            // Holographic ribbon
             const barLength = 15;
-            const holographicIndex = (level % 10) / 10;
-            const symbols = ['💠', '✦', '✧', '✦', '💠'];
-            const holographicRibbon = Array.from({ length: barLength }, (_, i) => {
-                const char = symbols[Math.floor((i / barLength) * symbols.length)];
-                return i < (holographicIndex * barLength) ? char : '░';
+            const holoPct = Math.min(100, Math.round((pts % 1000) / 1000 * 100));
+            const symbols = ['💠', '✦', '💎', '✧', '💠'];
+            const holoBar = Array.from({ length: barLength }, (_, i) => {
+                return i < Math.round(holoPct / 100 * barLength) ? symbols[i % symbols.length] : '░';
             }).join('');
+            const identityRibbon = `\`[${holoBar}]\` **LVL ${level} — ${rank}**`;
 
-            const identityRibbon = `\`[${holographicRibbon}]\` **TIER: ${Math.floor(level / 10) + 1} DIVINE**`;
+            // Shift history
+            const totalShiftSecs = recentShifts.reduce((s, sh) => s + (sh.duration || 0), 0);
+            const totalHours = Math.floor(totalShiftSecs / 3600);
+            const shiftHistory = recentShifts.length > 0
+                ? recentShifts.map(s => {
+                    const dur = s.duration ? `${Math.floor(s.duration / 3600)}h ${Math.floor((s.duration % 3600) / 60)}m` : 'N/A';
+                    const when = `<t:${Math.floor(new Date(s.startTime).getTime() / 1000)}:R>`;
+                    return `• ${when} — \`${dur}\``;
+                }).join('\n')
+                : '`No shifts recorded yet`';
 
-            // 2. Omni-Nexus Sector Density (V1-V8 presence simulation)
-            const sectors = ['V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8'];
-            const sectorDensity = sectors.map(s => pts > (parseInt(s[1]) * 100) ? `\`[${s}:√]\`` : `\`[${s}:×]\``).join(' ');
+            // Achievement display
+            const achieveDisplay = achievements.length > 0
+                ? achievements.slice(0, 6).map(a => `🏅 ${a}`).join('\n')
+                : '`No achievements yet`';
+
+            // Tier display (based on pts)
+            const tiers = ['V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8'];
+            const sectorStatus = tiers.map((t, i) => pts > i * 125 ? `\`✅${t}\`` : `\`❌${t}\``).join(' ');
 
             const embed = await createCustomEmbed(interaction, {
-                title: `💎 Zenith Divine Identity: ${target.username}`,
-                thumbnail: target.displayAvatarURL({ dynamic: true }),
-                description: `### 🛡️ Macroscopic Omni-Nexus Passport\nThe definitive identity record for personnel **${target.username}**, synchronized across all 8 Zenith operational tiers.\n\n**🌐 OMNI-NEXUS SECTOR DENSITY**\n${sectorDensity}\n\n**💎 ZENITH HYPER-APEX EXCLUSIVE**`,
+                title: `💎 Zenith Passport: ${target.username}`,
+                thumbnail: target.displayAvatarURL({ dynamic: true, size: 256 }),
+                description: `The definitive identity record for **${target.username}** in **${interaction.guild.name}**.\n\n${identityRibbon}\n\n**Sector Access:**\n${sectorStatus}`,
                 fields: [
-                    { name: '✨ Holographic Identity Ribbon', value: identityRibbon, inline: false },
-                    { name: '📊 Cumulative Merit', value: `\`${pts.toLocaleString()}\` signals`, inline: true },
-                    { name: '🎖️ Divine Ranking', value: `\`LVL ${level}\``, inline: true },
-                    { name: '📂 Authority Node', value: `\`${(user.staff.rank || 'Trial').toUpperCase()}\``, inline: true },
-                    { name: '⚖️ Mastery Velocity', value: `> Technical: \`${mastery.technical || 0}%\` | Social: \`${mastery.social || 0}%\``, inline: false },
-                    { name: '🛡️ Sync Status', value: '`AUTHENTICATED`', inline: true },
-                    { name: '🔄 Omni-Bridge', value: '`CONNECTED [V1-V8]`', inline: true },
-                    { name: '✨ Visual Tier', value: '`DIVINE [APEX]`', inline: true }
+                    { name: '⭐ Points', value: `\`${pts.toLocaleString()}\``, inline: true },
+                    { name: '📊 Consistency', value: `\`${createProgressBar(consistency)}\` ${consistency}%`, inline: false },
+                    { name: '🤝 Reputation', value: `\`${reputation}\` commendations`, inline: true },
+                    { name: '🔥 Shift Streak', value: `\`${streak}\` days`, inline: true },
+                    { name: '⏱️ Total Shift Time (Last 5)', value: `\`${totalHours}h\` across \`${recentShifts.length}\` shifts`, inline: false },
+                    { name: '📅 Recent Shifts', value: shiftHistory, inline: false },
+                    { name: '🏅 Achievements', value: achieveDisplay, inline: false }
                 ],
-                footer: 'Omni-Nexus Personnel Identity • V8 Divine Identity Suite',
-                color: 'premium'
+                color: 'zenith',
+                footer: `uwu-chan • Zenith Passport • ID: ${target.id}`
             });
 
             await interaction.editReply({ embeds: [embed] });
-
         } catch (error) {
-            console.error('Zenith Passport Error:', error);
-            await interaction.editReply({ embeds: [createErrorEmbed('Identity synthesis failure: Unable to compile macroscopic divine passport.')] });
+            console.error('[zenith_passport] Error:', error);
+            const errEmbed = createErrorEmbed('Failed to load Zenith Passport.');
+            if (interaction.deferred || interaction.replied) await interaction.editReply({ embeds: [errEmbed] });
+            else await interaction.reply({ embeds: [errEmbed], ephemeral: true });
         }
     }
 };

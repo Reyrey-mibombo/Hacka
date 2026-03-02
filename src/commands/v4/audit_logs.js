@@ -1,57 +1,114 @@
-﻿const { SlashCommandBuilder } = require('discord.js');
+﻿const { SlashCommandBuilder, PermissionFlagsBits, AuditLogEvent, ComponentType, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
 const { createCustomEmbed, createErrorEmbed } = require('../../utils/embeds');
-const { validatePremiumLicense } = require('../../utils/premium_guard');
-const { Activity } = require('../../database/mongo');
+
+const ACTION_MAP = {
+  all: null,
+  ban: AuditLogEvent.MemberBanAdd,
+  kick: AuditLogEvent.MemberKick,
+  mute: AuditLogEvent.MemberUpdate,
+  roles: AuditLogEvent.MemberRoleUpdate,
+  channels: AuditLogEvent.ChannelCreate
+};
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('audit_logs')
-    .setDescription('Zenith Apex: High-Fidelity Guardian Security Ledger'),
+    .setDescription('📋 View real Discord audit logs with filtering and pagination')
+    .addStringOption(opt =>
+      opt.setName('filter')
+        .setDescription('Filter by action type')
+        .addChoices(
+          { name: 'All Actions', value: 'all' },
+          { name: '🔨 Bans', value: 'ban' },
+          { name: '👢 Kicks', value: 'kick' },
+          { name: '🔇 Mutes/Updates', value: 'mute' },
+          { name: '🎭 Role Changes', value: 'roles' },
+          { name: '📌 Channel Changes', value: 'channels' }
+        )
+        .setRequired(false)
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.ViewAuditLog),
 
   async execute(interaction) {
     try {
       await interaction.deferReply();
 
-      // Zenith License Guard
-      const license = await validatePremiumLicense(interaction);
-      if (!license.allowed) {
-        return interaction.editReply({ embeds: [license.embed], components: license.components });
+      if (!interaction.member.permissions.has(PermissionFlagsBits.ViewAuditLog)) {
+        return interaction.editReply({ embeds: [createErrorEmbed('You need the `View Audit Log` permission.')] });
       }
 
-      const guildId = interaction.guildId;
-      const logs = await Activity.find({ guildId })
-        .sort({ createdAt: -1 })
-        .limit(8);
+      const filter = interaction.options.getString('filter') || 'all';
+      const actionType = ACTION_MAP[filter];
 
-      if (logs.length === 0) {
-        return interaction.editReply({ embeds: [createErrorEmbed('No audit log signals found in the active telemetry registry.')] });
+      const fetchOptions = { limit: 50 };
+      if (actionType !== null) fetchOptions.type = actionType;
+
+      const logs = await interaction.guild.fetchAuditLogs(fetchOptions);
+      const entries = [...logs.entries.values()];
+
+      if (entries.length === 0) {
+        return interaction.editReply({ embeds: [createErrorEmbed('No audit log entries found for this filter.')] });
       }
 
-      const formatLog = (log) => {
-        const time = new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const action = log.type?.toUpperCase() || 'SIGNAL';
-        const user = log.userId ? `<@${log.userId}>` : '`Unknown`';
-        return `\`[${time}]\` **${action}** ░ ${user}`;
+      const perPage = 8;
+      let page = 0;
+      const totalPages = Math.ceil(entries.length / perPage);
+
+      const buildEmbed = async (p) => {
+        const slice = entries.slice(p * perPage, (p + 1) * perPage);
+        const lines = slice.map(e => {
+          const executor = e.executor ? `**${e.executor.username}**` : '`Unknown`';
+          const target = e.target?.username ? `→ **${e.target.username}**` : '';
+          const reason = e.reason ? `*"${e.reason.substring(0, 40)}"*` : '';
+          const timeAgo = `<t:${Math.floor(e.createdTimestamp / 1000)}:R>`;
+          return `${executor} ${target} — \`${e.actionType}\` ${timeAgo}${reason ? `\n> ${reason}` : ''}`;
+        });
+
+        return createCustomEmbed(interaction, {
+          title: `📋 Audit Logs — ${interaction.guild.name}`,
+          description: lines.join('\n\n') || '*No entries*',
+          thumbnail: interaction.guild.iconURL({ dynamic: true }),
+          fields: [
+            { name: '🔍 Filter', value: `\`${filter.toUpperCase()}\``, inline: true },
+            { name: '📄 Entries Shown', value: `\`${slice.length}\` / \`${entries.length}\``, inline: true },
+            { name: '📖 Page', value: `\`${p + 1} / ${totalPages}\``, inline: true }
+          ],
+          color: 'premium',
+          footer: 'uwu-chan • Real Discord Audit Log'
+        });
       };
 
-      const embed = await createCustomEmbed(interaction, {
-        title: '📋 Zenith Guardian Security Ledger',
-        thumbnail: interaction.guild.iconURL({ dynamic: true }),
-        description: `### 🛡️ Operational Audit Node\nChronological forensic trace of security interventions and system metabolic events in the **${interaction.guild.name}** sector.\n\n**💎 ZENITH APEX EXCLUSIVE**`,
-        fields: [
-          { name: '📑 High-Fidelity Ledger Output', value: logs.map(formatLog).join('\n') || '*Active registry empty.*', inline: false },
-          { name: '⚖️ Data Fidelity', value: '`ULTRA-PREMIUM`', inline: true },
-          { name: '🛰️ Monitor Cache', value: '`ENCRYPTED`', inline: true },
-          { name: '🛡️ Auth Node', value: '`ZENITH-01`', inline: true }
-        ],
-        footer: 'Authenticated Security Ledger • V4 Guardian Apex Suite',
-        color: 'premium'
+      const getRow = (p) => new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('audit_prev').setLabel('◀ Previous').setStyle(ButtonStyle.Primary).setDisabled(p === 0),
+        new ButtonBuilder().setCustomId('audit_next').setLabel('Next ▶').setStyle(ButtonStyle.Primary).setDisabled(p === totalPages - 1)
+      );
+
+      const msg = await interaction.editReply({
+        embeds: [await buildEmbed(page)],
+        components: totalPages > 1 ? [getRow(page)] : []
       });
 
-      await interaction.editReply({ embeds: [embed] });
+      if (totalPages <= 1) return;
+
+      const collector = msg.createMessageComponentCollector({
+        componentType: ComponentType.Button,
+        filter: i => i.user.id === interaction.user.id,
+        time: 120000
+      });
+
+      collector.on('collect', async i => {
+        await i.deferUpdate();
+        if (i.customId === 'audit_prev') page = Math.max(0, page - 1);
+        if (i.customId === 'audit_next') page = Math.min(totalPages - 1, page + 1);
+        await i.editReply({ embeds: [await buildEmbed(page)], components: [getRow(page)] });
+      });
+
+      collector.on('end', () => { msg.edit({ components: [] }).catch(() => { }); });
     } catch (error) {
-      console.error('Zenith Audit Logs Error:', error);
-      await interaction.editReply({ embeds: [createErrorEmbed('Guardian Ledger failure: Unable to decode encrypted signals.')] });
+      console.error('[audit_logs] Error:', error);
+      const errEmbed = createErrorEmbed('Failed to fetch audit logs. Check my permissions (`View Audit Log`).');
+      if (interaction.deferred || interaction.replied) await interaction.editReply({ embeds: [errEmbed] });
+      else await interaction.reply({ embeds: [errEmbed], ephemeral: true });
     }
   }
 };

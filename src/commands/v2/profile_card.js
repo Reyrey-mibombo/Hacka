@@ -1,82 +1,96 @@
-const { SlashCommandBuilder } = require('discord.js');
-const { createCustomEmbed, createErrorEmbed } = require('../../utils/embeds');
-const { User, Shift, Activity } = require('../../database/mongo');
+const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { createCustomEmbed, createErrorEmbed, createProgressBar } = require('../../utils/embeds');
+const { User, Warning, Shift, Activity } = require('../../database/mongo');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('profile_card')
-        .setDescription('Zenith Hyper-Apex: Macroscopic Staff Passport & Identity Dossier')
-        .addUserOption(opt => opt.setName('user').setDescription('Sector Personnel (Optional)').setRequired(false)),
+        .setDescription('🪪 View your full staff profile card — XP, achievements, shifts, and badges')
+        .addUserOption(opt =>
+            opt.setName('user').setDescription('Staff member to view').setRequired(false)
+        ),
 
     async execute(interaction) {
         try {
             await interaction.deferReply();
-            const targetUser = interaction.options.getUser('user') || interaction.user;
+            const target = interaction.options.getUser('user') || interaction.user;
             const guildId = interaction.guildId;
 
-            const [userData, shifts, activities] = await Promise.all([
-                User.findOne({ userId: targetUser.id, guildId }).lean(),
-                Shift.find({ userId: targetUser.id, guildId }).lean(),
-                Activity.find({ userId: targetUser.id, guildId }).lean()
+            const [user, warnings, shifts] = await Promise.all([
+                User.findOne({ userId: target.id, 'guilds.guildId': guildId }).lean(),
+                Warning.find({ userId: target.id, guildId }).lean(),
+                Shift.find({ userId: target.id, guildId, endTime: { $ne: null } }).lean()
             ]);
 
-            if (!userData || !userData.staff) {
-                return interaction.editReply({ embeds: [createErrorEmbed(`No signal dossier found for <@${targetUser.id}>.`)] });
-            }
+            const staff = user?.staff || {};
+            const points = staff.points || 0;
+            const level = staff.level || 1;
+            const xp = staff.xp || 0;
+            const rank = (staff.rank || 'Member').toUpperCase();
+            const consistency = staff.consistency || 100;
+            const reputation = staff.reputation || 0;
+            const achievements = staff.achievements || [];
+            const trophies = staff.trophies || [];
+            const streak = staff.streak || 0;
+            const warnCount = warnings.length;
 
-            const points = userData.staff.points || 0;
-            const rank = (userData.staff.rank || 'Trial').toUpperCase();
-            const achievements = userData.staff.achievements || [];
-            const totalShifts = shifts.length;
-            const level = userData.staff.level || 1;
-            const xp = userData.staff.xp || 0;
-            const equippedPerk = userData.staff.equippedPerk || 'Standard Personnel';
+            // XP Progress Bar (per level ~ 1000 xp)
+            const xpForLevel = 1000;
+            const xpPercent = Math.min(100, Math.round((xp % xpForLevel) / xpForLevel * 100));
+            const xpBar = createProgressBar(xpPercent, 15);
 
-            const { calculateXPNeeded } = require('../../utils/xpSystem');
-            const xpNeeded = calculateXPNeeded(level);
+            // Points Progress Bar (capped at 1000 for visual)
+            const ptsPercent = Math.min(100, Math.round((points % 1000) / 1000 * 100));
+            const ptsBar = createProgressBar(ptsPercent, 15);
 
-            const xpPercent = Math.min(100, Math.floor((xp / xpNeeded) * 100));
-            const barLength = 15;
-            const filled = '█'.repeat(Math.round((xpPercent / 100) * barLength));
-            const empty = '░'.repeat(barLength - filled.length);
-            const resonanceRibbon = `\`[${filled}${empty}]\` **${xpPercent}%**`;
+            // Total shift time
+            const totalShiftSecs = shifts.reduce((sum, s) => sum + (s.duration || 0), 0);
+            const shiftHours = Math.floor(totalShiftSecs / 3600);
+            const shiftMins = Math.floor((totalShiftSecs % 3600) / 60);
 
-            const completedShifts = shifts.filter(s => s.endTime).length;
-            const efficiency = totalShifts > 0 ? Math.round((completedShifts / totalShifts) * 100) : 0;
+            const achievementDisplay = achievements.length > 0
+                ? achievements.slice(0, 5).map(a => `🏅 ${a}`).join('\n')
+                : '*(No achievements yet)*';
 
-            const efficiencyLength = 10;
-            const effFilled = '█'.repeat(Math.round(efficiency / 10));
-            const effEmpty = '░'.repeat(efficiencyLength - effFilled.length);
-            const metabolicRibbon = `\`[${effFilled}${effEmpty}]\` **${efficiency}%**`;
-
-            const badgeList = achievements.length > 0
-                ? achievements.slice(0, 5).map(a => `\`${a}\``).join(' ')
-                : '*No badges awarded*';
+            const badgeDisplay = trophies.length > 0
+                ? trophies.slice(0, 5).map(t => `🏆 ${t}`).join('\n')
+                : '*(No trophies yet)*';
 
             const embed = await createCustomEmbed(interaction, {
-                title: `📇 Zenith Hyper-Apex: Staff Passport`,
-                thumbnail: targetUser.displayAvatarURL({ dynamic: true }),
-                description: `### 🛡️ Sector Identity Dossier\nAuthenticated personnel profile for **${targetUser.username}**. Resonance synchronization active.\n\n**💎 ZENITH HYPER-APEX EXCLUSIVE**`,
+                title: `🪪 Staff Profile: ${target.username}`,
+                thumbnail: target.displayAvatarURL({ dynamic: true, size: 256 }),
+                description: `**${target.globalName || target.username}** — ${interaction.guild.name}\nRank: \`${rank}\` | Streak: \`🔥 ${streak} days\``,
                 fields: [
-                    { name: '📂 Classification', value: `\`${rank}\``, inline: true },
-                    { name: '✨ Level Clearance', value: `\`LVL ${level}\``, inline: true },
-                    { name: '⭐ Strategic Points', value: `\`${points.toLocaleString()}\``, inline: true },
-                    { name: '🔋 Resonance Ribbon', value: resonanceRibbon, inline: false },
-                    { name: '📊 Metabolic Efficiency', value: metabolicRibbon, inline: false },
-                    { name: '🎖️ Tactical Perk', value: `\`${equippedPerk.toUpperCase()}\``, inline: true },
-                    { name: '🔄 Lifetime Patrols', value: `\`${totalShifts.toLocaleString()}\``, inline: true },
-                    { name: '🏅 Active Merits', value: badgeList, inline: false },
-                    { name: '🌐 Global Benchmark', value: '`🟢 ELITE S-TIER`', inline: true }
+                    { name: '⭐ Points', value: `\`${points.toLocaleString()} pts\`\n\`${ptsBar}\` ${ptsPercent}%`, inline: true },
+                    { name: '✨ EXP / Level', value: `\`LVL ${level}\`\n\`${xpBar}\` ${xpPercent}%`, inline: true },
+                    { name: '📊 Consistency', value: `\`${createProgressBar(consistency)}\` ${consistency}%`, inline: false },
+                    { name: '⏱️ Total Shift Time', value: `\`${shiftHours}h ${shiftMins}m\` across \`${shifts.length}\` shifts`, inline: true },
+                    { name: '⚠️ Warnings', value: `\`${warnCount}\` recorded`, inline: true },
+                    { name: '🤝 Reputation', value: `\`${reputation}\` commendations`, inline: true },
+                    { name: '🏅 Achievements', value: achievementDisplay, inline: true },
+                    { name: '🏆 Trophies', value: badgeDisplay, inline: true }
                 ],
-                footer: 'Blockchain-verified Operational Identity • V2 Expansion Hyper-Apex',
-                color: (efficiency >= 90 ? 'success' : 'premium')
+                color: '#5865F2',
+                footer: `uwu-chan • Profile Card • ID: ${target.id}`
             });
 
-            await interaction.editReply({ embeds: [embed] });
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`export_stats_${target.id}`)
+                    .setLabel('📥 Export CSV')
+                    .setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder()
+                    .setLabel('🔗 Discord Profile')
+                    .setStyle(ButtonStyle.Link)
+                    .setURL(`https://discord.com/users/${target.id}`)
+            );
 
+            await interaction.editReply({ embeds: [embed], components: [row] });
         } catch (error) {
-            console.error('Profile Card Error:', error);
-            await interaction.editReply({ embeds: [createErrorEmbed('Dossier failure: Unable to synchronize high-fidelity identity card.')] });
+            console.error('[profile_card] Error:', error);
+            const errEmbed = createErrorEmbed('Failed to load profile card. Make sure the user has used the bot before.');
+            if (interaction.deferred || interaction.replied) await interaction.editReply({ embeds: [errEmbed] });
+            else await interaction.reply({ embeds: [errEmbed], ephemeral: true });
         }
     }
 };

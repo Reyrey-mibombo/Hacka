@@ -1,65 +1,146 @@
-﻿const { SlashCommandBuilder } = require('discord.js');
-const { Guild, Activity, User } = require('../../database/mongo');
-const { createCustomEmbed } = require('../../utils/embeds');
+﻿const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
+const { createCustomEmbed, createErrorEmbed, createProgressBar } = require('../../utils/embeds');
 const { validatePremiumLicense } = require('../../utils/premium_guard');
+const { Guild, Activity, User } = require('../../database/mongo');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('interactive_dashboard')
-    .setDescription('Zenith Hyper-Apex: Full Divine Interactive Sector Dashboard'),
+    .setDescription('💎 Zenith fully interactive server dashboard with real-time tab navigation'),
 
   async execute(interaction) {
     try {
       await interaction.deferReply();
 
-      // Zenith Hyper-Apex License Guard
       const license = await validatePremiumLicense(interaction);
       if (!license.allowed) {
         return interaction.editReply({ embeds: [license.embed], components: license.components });
       }
 
       const guildId = interaction.guildId;
-      const now = new Date();
-      const sevenDaysAgo = new Date(now - 7 * 86400000);
+      let activeTab = 'overview';
 
-      const [guild, weekActs, stats] = await Promise.all([
-        Guild.findOne({ guildId }).lean(),
-        Activity.find({ guildId, createdAt: { $gte: sevenDaysAgo } }).lean(),
-        Promise.resolve(license.guildData?.stats || {})
-      ]);
+      const buildTabEmbed = async (tab) => {
+        const now = new Date();
+        const sevenDaysAgo = new Date(now - 7 * 86400000);
 
-      const memberCount = interaction.guild.memberCount;
-      const activeUsers = [...new Set(weekActs.map(a => a.userId))].length;
-      const engRate = Math.round((activeUsers / Math.max(memberCount, 1)) * 100);
-      const uptime = process.uptime();
-      const uptimeStr = `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`;
+        if (tab === 'staff') {
+          const users = await User.find({ userId: { $exists: true }, 'staff.points': { $gt: 0 } })
+            .sort({ 'staff.points': -1 }).limit(10).lean();
+          const topList = users.length > 0
+            ? users.map((u, i) => `\`${String(i + 1).padStart(2, '0')}\` **${u.username || u.userId}** — \`${(u.staff?.points || 0).toLocaleString()} pts\``)
+              .join('\n')
+            : '`No staff data yet`';
+          const avgConsistency = users.length > 0
+            ? (users.reduce((s, u) => s + (u.staff?.consistency || 100), 0) / users.length).toFixed(1)
+            : '100';
 
-      const engBar = '█'.repeat(Math.round(engRate / 10)) + '░'.repeat(10 - Math.round(engRate / 10));
+          return createCustomEmbed(interaction, {
+            title: `👥 Staff Overview — ${interaction.guild.name}`,
+            thumbnail: interaction.guild.iconURL({ dynamic: true }),
+            description: `Top staff members and performance metrics.`,
+            fields: [
+              { name: '🏆 Top 10 Staff', value: topList, inline: false },
+              { name: '📊 Avg Consistency', value: `\`${createProgressBar(Math.round(parseFloat(avgConsistency)))}\` ${avgConsistency}%`, inline: false },
+              { name: '👥 Total Tracked Staff', value: `\`${users.length}\``, inline: true }
+            ],
+            color: 'enterprise',
+            footer: 'uwu-chan • Zenith Staff Tab'
+          });
+        }
 
-      const embed = await createCustomEmbed(interaction, {
-        title: '💎 Zenith Divine Identity: Interactive Dashboard',
-        thumbnail: interaction.guild.iconURL({ dynamic: true }),
-        description: `### 🛡️ Divine Sector Orchestration\nMacroscopic administrative portal for **${interaction.guild.name}**. Real-time metabolic ROI and pulse synchronization active.\n\n**💎 ZENITH HYPER-APEX EXCLUSIVE**`,
-        fields: [
-          { name: '👥 Personnel Nodes', value: `\`${memberCount}\` units`, inline: true },
-          { name: '✅ Active Resonance', value: `\`${activeUsers}\` nodes (7d)`, inline: true },
-          { name: '📊 Metabolic ROI', value: `\`${engBar}\` **+${engRate}%**`, inline: false },
-          { name: '⚡ Pulse Signals', value: `\`${(stats.commandsUsed || 0).toLocaleString()}\` cmd`, inline: true },
-          { name: '⚠️ Risk Fragments', value: `\`${stats.warnings || 0}\` alert`, inline: true },
-          { name: '🤖 System Uptime', value: `\`${uptimeStr}\``, inline: true },
-          { name: '🌐 Global Benchmark', value: '`🟢 ELITE PERFORMANCE`', inline: true },
-          { name: '✨ Visual Tier', value: '`DIVINE [HYPER-APEX]`', inline: true },
-          { name: '🔄 Omni- ब्रिज', value: '`SYNCHRONIZED`', inline: true }
-        ],
-        footer: 'Divine Identity Dashboard • V8 Identity Matrix Suite',
-        color: 'premium'
+        if (tab === 'moderation') {
+          const { Warning } = require('../../database/mongo');
+          const [weekWarnings, totalWarnings] = await Promise.all([
+            Warning.find({ guildId, createdAt: { $gte: sevenDaysAgo } }).lean(),
+            Warning.find({ guildId }).lean()
+          ]);
+          const highSeverity = weekWarnings.filter(w => w.severity === 'high').length;
+          const recentWarnUsers = [...new Set(weekWarnings.map(w => w.userId))];
+
+          return createCustomEmbed(interaction, {
+            title: `🛡️ Moderation Overview — ${interaction.guild.name}`,
+            thumbnail: interaction.guild.iconURL({ dynamic: true }),
+            description: `Real-time moderation statistics for the server.`,
+            fields: [
+              { name: '⚠️ Warnings This Week', value: `\`${weekWarnings.length}\``, inline: true },
+              { name: '🔴 High Severity', value: `\`${highSeverity}\``, inline: true },
+              { name: '👤 Users Warned', value: `\`${recentWarnUsers.length}\``, inline: true },
+              { name: '📊 Total Warnings (All Time)', value: `\`${totalWarnings.length}\``, inline: true },
+              {
+                name: '🛡️ Server Verification',
+                value: `\`${interaction.guild.verificationLevel}\` • Explicit Filter: \`${interaction.guild.explicitContentFilter}\``,
+                inline: false
+              }
+            ],
+            color: 'enterprise',
+            footer: 'uwu-chan • Zenith Moderation Tab'
+          });
+        }
+
+        // Default: Overview tab
+        const [weekActs, guild] = await Promise.all([
+          Activity.find({ guildId, createdAt: { $gte: sevenDaysAgo } }).lean(),
+          Guild.findOne({ guildId }).lean()
+        ]);
+
+        const memberCount = interaction.guild.memberCount;
+        const activeUsers = new Set(weekActs.map(a => a.userId)).size;
+        const engRate = Math.round((activeUsers / Math.max(memberCount, 1)) * 100);
+        const uptime = process.uptime();
+        const uptimeStr = `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`;
+        const tier = guild?.premium?.tier || 'free';
+        const cmds = guild?.stats?.commandsUsed || weekActs.filter(a => a.type === 'command').length;
+
+        return createCustomEmbed(interaction, {
+          title: `💎 Server Dashboard — ${interaction.guild.name}`,
+          thumbnail: interaction.guild.iconURL({ dynamic: true }),
+          description: `Welcome to the Zenith Interactive Dashboard. Navigate tabs below.`,
+          fields: [
+            { name: '👥 Members', value: `\`${memberCount.toLocaleString()}\``, inline: true },
+            { name: '✅ Active (7d)', value: `\`${activeUsers}\``, inline: true },
+            { name: '📊 Engagement', value: `\`${createProgressBar(engRate)}\` **${engRate}%**`, inline: false },
+            { name: '⚡ Commands Used', value: `\`${cmds.toLocaleString()}\``, inline: true },
+            { name: '🤖 Bot Uptime', value: `\`${uptimeStr}\``, inline: true },
+            { name: '💎 License Tier', value: `\`${tier.toUpperCase()}\``, inline: true },
+            { name: '📅 Server Created', value: `<t:${Math.floor(interaction.guild.createdTimestamp / 1000)}:D>`, inline: true }
+          ],
+          color: 'zenith',
+          footer: 'uwu-chan • Zenith Interactive Dashboard'
+        });
+      };
+
+      const getRow = (tab) => new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('dash_overview').setLabel('🌐 Overview').setStyle(tab === 'overview' ? ButtonStyle.Primary : ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('dash_staff').setLabel('👥 Staff').setStyle(tab === 'staff' ? ButtonStyle.Primary : ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('dash_moderation').setLabel('🛡️ Moderation').setStyle(tab === 'moderation' ? ButtonStyle.Primary : ButtonStyle.Secondary)
+      );
+
+      const msg = await interaction.editReply({
+        embeds: [await buildTabEmbed(activeTab)],
+        components: [getRow(activeTab)]
       });
 
-      await interaction.editReply({ embeds: [embed] });
+      const collector = msg.createMessageComponentCollector({
+        componentType: ComponentType.Button,
+        filter: i => i.user.id === interaction.user.id,
+        time: 300000
+      });
 
+      collector.on('collect', async i => {
+        await i.deferUpdate();
+        activeTab = i.customId.replace('dash_', '');
+        await i.editReply({ embeds: [await buildTabEmbed(activeTab)], components: [getRow(activeTab)] });
+      });
+
+      collector.on('end', () => {
+        msg.edit({ components: [] }).catch(() => { });
+      });
     } catch (error) {
-      console.error('Interactive Dashboard Error:', error);
-      await interaction.editReply({ embeds: [createErrorEmbed('Nexus failure: Unable to synchronize Divine Identity Dashboard.')] });
+      console.error('[interactive_dashboard] Error:', error);
+      const errEmbed = createErrorEmbed('Failed to load the interactive dashboard.');
+      if (interaction.deferred || interaction.replied) await interaction.editReply({ embeds: [errEmbed] });
+      else await interaction.reply({ embeds: [errEmbed], ephemeral: true });
     }
   }
 };

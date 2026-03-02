@@ -1,30 +1,58 @@
 const { EmbedBuilder } = require('discord.js');
 
 const EMBED_COLORS = {
-    primary: '#7289da',
+    primary: '#5865F2',
     success: '#43b581',
     error: '#f04747',
     warning: '#faa61a',
     info: '#3498db',
     premium: '#ff73fa',
     enterprise: '#f1c40f',
-    dark: '#2f3136'
+    zenith: '#00fff5',
+    dark: '#2f3136',
+    free: '#5865F2'
 };
 
-
+// Tier-specific branding
+const TIER_BRANDING = {
+    free: { color: '#5865F2', prefix: '', footer: 'uwu-chan • Free Tier' },
+    premium: { color: '#ff73fa', prefix: '✨ ', footer: 'uwu-chan • Premium Tier' },
+    enterprise: { color: '#f1c40f', prefix: '👑 ', footer: 'uwu-chan • Enterprise Tier' },
+    zenith: { color: '#00fff5', prefix: '💎 ', footer: 'uwu-chan • Zenith Hyper-Apex' }
+};
 
 /**
- * Creates a base "cool" embed with consistent branding.
- * @param {Object} options Options for the embed
- * @param {string} options.title The embed title
- * @param {string} [options.description] The embed description
- * @param {string} [options.color] The embed color (hex or standard color name)
- * @param {Object} [options.author] The author object { name, iconURL, url }
- * @param {string} [options.thumbnail] Thumbnail URL
- * @param {string} [options.image] Main image URL
- * @param {Object} [options.branding] Custom branding overrides { color, footer, iconURL }
+ * Creates a visual progress bar string
+ * @param {number} percent 0-100
+ * @param {number} length Bar character length
+ * @returns {string}
+ */
+function createProgressBar(percent, length = 15) {
+    const p = Math.min(Math.max(parseFloat(percent) || 0, 0), 100);
+    const filled = Math.round((p / 100) * length);
+    const empty = length - filled;
+    return '█'.repeat(filled) + '░'.repeat(empty);
+}
+
+/**
+ * Creates a tier-styled embed with consistent branding
+ * @param {string} tier 'free' | 'premium' | 'enterprise' | 'zenith'
+ * @param {Object} options Embed options
  * @returns {EmbedBuilder}
  */
+function createTierEmbed(tier = 'free', options = {}) {
+    const brand = TIER_BRANDING[tier] || TIER_BRANDING.free;
+    return createCoolEmbed({
+        ...options,
+        color: options.color || brand.color,
+        title: options.title ? `${brand.prefix}${options.title}` : options.title,
+        branding: {
+            footer: options.footer || brand.footer,
+            ...options.branding
+        }
+    });
+}
+
 /**
  * Asynchronously generates a branded embed by fetching guild settings
  * @param {Object} interaction The discord interaction or message object
@@ -71,7 +99,7 @@ function createCoolEmbed(options = {}) {
     embed.setColor(color);
 
     // Handle Custom Branding Footer
-    const footerText = branding.footer || null;
+    const footerText = branding.footer || options.footer || null;
     const footerIcon = branding.iconURL || null;
 
     if (footerText && footerIcon) {
@@ -79,7 +107,7 @@ function createCoolEmbed(options = {}) {
     } else if (footerText) {
         embed.setFooter({ text: footerText });
     } else if (footerIcon) {
-        embed.setFooter({ text: '\u200B', iconURL: footerIcon }); // Discord requires text if iconURL is set
+        embed.setFooter({ text: '\u200B', iconURL: footerIcon });
     }
 
     embed.setTimestamp();
@@ -98,6 +126,10 @@ function createCoolEmbed(options = {}) {
     if (options.thumbnail) embed.setThumbnail(options.thumbnail);
     if (options.image) embed.setImage(options.image);
 
+    if (options.fields && options.fields.length > 0) {
+        embed.addFields(options.fields);
+    }
+
     return embed;
 }
 
@@ -108,7 +140,8 @@ function createErrorEmbed(message) {
     return createCoolEmbed({
         title: '❌ Error',
         description: message,
-        color: 'error'
+        color: 'error',
+        footer: 'uwu-chan • Something went wrong'
     });
 }
 
@@ -127,10 +160,9 @@ function createSuccessEmbed(title, message) {
  * Creates a premium-styled embed
  */
 function createPremiumEmbed(options = {}) {
-    return createCoolEmbed({
+    return createTierEmbed('premium', {
         ...options,
-        color: 'premium',
-        title: options.title ? `✨ ${options.title}` : '✨ Premium Feature'
+        title: options.title || 'Premium Feature'
     });
 }
 
@@ -138,19 +170,44 @@ function createPremiumEmbed(options = {}) {
  * Creates an enterprise-styled embed
  */
 function createEnterpriseEmbed(options = {}) {
-    return createCoolEmbed({
+    return createTierEmbed('enterprise', {
         ...options,
-        color: 'enterprise',
-        title: options.title ? `👑 ${options.title}` : '👑 Enterprise Feature'
+        title: options.title || 'Enterprise Feature'
     });
+}
+
+/**
+ * Creates a zenith-styled embed
+ */
+function createZenithEmbed(options = {}) {
+    return createTierEmbed('zenith', {
+        ...options,
+        title: options.title || 'Zenith Feature'
+    });
+}
+
+/**
+ * Creates a stat field object for use in embed.addFields()
+ * @param {string} label Field name
+ * @param {string|number} value Field value
+ * @param {boolean} inline
+ * @returns {{ name, value, inline }}
+ */
+function createStatField(label, value, inline = true) {
+    return { name: label, value: String(value), inline };
 }
 
 module.exports = {
     EMBED_COLORS,
+    TIER_BRANDING,
+    createProgressBar,
+    createTierEmbed,
     createCoolEmbed,
     createCustomEmbed,
     createErrorEmbed,
     createSuccessEmbed,
     createPremiumEmbed,
-    createEnterpriseEmbed
+    createEnterpriseEmbed,
+    createZenithEmbed,
+    createStatField
 };

@@ -1,73 +1,91 @@
 ﻿const { SlashCommandBuilder } = require('discord.js');
-const { createCustomEmbed, createErrorEmbed } = require('../../utils/embeds');
+const { createCustomEmbed, createErrorEmbed, createProgressBar } = require('../../utils/embeds');
 const { validatePremiumLicense } = require('../../utils/premium_guard');
 const { Activity } = require('../../database/mongo');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('growth_tracking')
-    .setDescription('Zenith Apex: Macroscopic Growth Trajectory & AI Forecasting'),
+    .setDescription('📈 Track real member and activity growth trends over time'),
 
   async execute(interaction) {
     try {
       await interaction.deferReply();
 
-      // Zenith License Guard
       const license = await validatePremiumLicense(interaction);
       if (!license.allowed) {
         return interaction.editReply({ embeds: [license.embed], components: license.components });
       }
 
       const guildId = interaction.guildId;
-      const guild = interaction.guild;
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now - 30 * 86400000);
 
-      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+      // Fetch 30 days of activity
+      const activities = await Activity.find({ guildId, createdAt: { $gte: thirtyDaysAgo } })
+        .sort({ createdAt: 1 }).lean();
 
-      const [thisWeek, lastWeek] = await Promise.all([
-        Activity.find({ guildId, createdAt: { $gte: weekAgo } }).lean(),
-        Activity.find({ guildId, createdAt: { $gte: twoWeeksAgo, $lt: weekAgo } }).lean()
-      ]);
+      if (activities.length === 0) {
+        return interaction.editReply({ embeds: [createErrorEmbed('Not enough activity data for growth tracking. Start using commands!')] });
+      }
 
-      const thisWeekMessages = thisWeek.filter(a => a.type === 'message').length;
-      const lastWeekMessages = lastWeek.filter(a => a.type === 'message').length;
+      // Group by week (4 weeks)
+      const weekCounts = [0, 0, 0, 0];
+      activities.forEach(a => {
+        const daysAgo = Math.floor((now - new Date(a.createdAt)) / 86400000);
+        const weekIdx = Math.min(3, Math.floor(daysAgo / 7));
+        weekCounts[3 - weekIdx]++;
+      });
 
-      const newMembers = guild.members.cache.filter(m => m.joinedAt && m.joinedAt >= weekAgo).size;
-      const activeUsers = new Set(thisWeek.map(a => a.userId)).size;
+      // Growth rates
+      const weekLabels = ['Week 4 ago', 'Week 3 ago', 'Week 2 ago', 'This Week'];
+      const maxWeek = Math.max(...weekCounts, 1);
+      const weekDisplay = weekCounts.map((c, i) => {
+        const bar = createProgressBar(Math.round((c / maxWeek) * 100), 10);
+        const delta = i > 0 && weekCounts[i - 1] > 0
+          ? ((c - weekCounts[i - 1]) / weekCounts[i - 1] * 100).toFixed(0)
+          : null;
+        const arrow = delta !== null ? (parseFloat(delta) > 0 ? `📈 +${delta}%` : `📉 ${delta}%`) : '';
+        return `**${weekLabels[i]}**: \`${bar}\` \`${c}\` ${arrow}`;
+      }).join('\n');
 
-      const growth = lastWeekMessages > 0
-        ? ((thisWeekMessages - lastWeekMessages) / lastWeekMessages * 100).toFixed(1)
-        : (thisWeekMessages > 0 ? 100 : 0);
+      // Week-over-week overall
+      const thisWeek = weekCounts[3];
+      const lastWeek = weekCounts[2];
+      const overallGrowth = lastWeek > 0 ? ((thisWeek - lastWeek) / lastWeek * 100).toFixed(1) : '∞';
+      const growthColor = parseFloat(overallGrowth) >= 0 ? '#43b581' : '#f04747';
 
-      // 1. Generate Trajectory Ribbon (ASCII bar)
-      const barLength = 15;
-      const normalizedGrowth = Math.min(100, Math.max(-100, parseFloat(growth)));
-      const filledLength = Math.round(((normalizedGrowth + 100) / 200) * barLength);
-      const filled = '█'.repeat(filledLength);
-      const empty = '░'.repeat(barLength - filledLength);
-      const trajectoryRibbon = `\`[${filled}${empty}]\` **${growth}%**`;
+      // Member count from Discord
+      const memberCount = interaction.guild.memberCount;
+
+      // Active users this week
+      const oneWeekAgo = new Date(now - 7 * 86400000);
+      const recentActs = activities.filter(a => new Date(a.createdAt) >= oneWeekAgo);
+      const activeUsers = new Set(recentActs.map(a => a.userId)).size;
+      const retentionPct = Math.min(100, Math.round((activeUsers / Math.max(memberCount, 1)) * 100));
 
       const embed = await createCustomEmbed(interaction, {
-        title: '📊 Zenith Executive: Growth Trajectory Matrix',
-        thumbnail: guild.iconURL({ dynamic: true }),
-        description: `### 🔮 Predictive Expansion Intelligence\nRefining macroscopic growth vectors for the **${guild.name}** sector. Analyzing 7-day metabolic signal density.\n\n**💎 ZENITH APEX EXCLUSIVE**`,
+        title: `📈 Growth Tracking — ${interaction.guild.name}`,
+        thumbnail: interaction.guild.iconURL({ dynamic: true }),
+        description: `Real activity growth over the last **30 days** across **4 weeks**.`,
         fields: [
-          { name: '📈 Trajectory Ribbon (7D Pulse)', value: trajectoryRibbon, inline: false },
-          { name: '👥 Workforce Expansion', value: `\`+${newMembers}\` New Nodes`, inline: true },
-          { name: '📡 Signal Throughput', value: `\`${thisWeekMessages.toLocaleString()}\` Signals`, inline: true },
-          { name: '🌐 Active Operatives', value: `\`${activeUsers}\` Registered`, inline: true },
-          { name: '⚖️ Intelligence Tier', value: '`PLATINUM (APEX)`', inline: true },
-          { name: '🛡️ Status', value: growth > 0 ? '`OPTIMIZED`' : '`NOMINAL`', inline: true }
+          { name: '📊 Weekly Activity Trend', value: weekDisplay, inline: false },
+          { name: '📈 Week-over-Week Growth', value: `\`${overallGrowth}%\``, inline: true },
+          { name: '👥 Members', value: `\`${memberCount.toLocaleString()}\``, inline: true },
+          { name: '🔁 Weekly Retention', value: `\`${createProgressBar(retentionPct)}\` **${retentionPct}%**`, inline: false },
+          { name: '⭐ Total Events (30d)', value: `\`${activities.length.toLocaleString()}\``, inline: true },
+          { name: '👥 Active This Week', value: `\`${activeUsers}\` users`, inline: true }
         ],
-        footer: 'Executive Intelligence Ribbons • V5 Executive Apex Suite',
-        color: growth > 0 ? 'success' : 'premium'
+        color: growthColor,
+        footer: 'uwu-chan • Premium Growth Tracking • 30-Day View'
       });
 
       await interaction.editReply({ embeds: [embed] });
-
     } catch (error) {
-      console.error('Zenith Growth Tracking Error:', error);
-      await interaction.editReply({ embeds: [createErrorEmbed('Growth Intelligence failure: Unable to establish trajectory ribbons.')] });
+      console.error('[growth_tracking] Error:', error);
+      const errEmbed = createErrorEmbed('Failed to load growth tracking data.');
+      if (interaction.deferred || interaction.replied) await interaction.editReply({ embeds: [errEmbed] });
+      else await interaction.reply({ embeds: [errEmbed], ephemeral: true });
     }
   }
 };

@@ -1,76 +1,94 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { createCustomEmbed, createErrorEmbed } = require('../../utils/embeds');
+const { createCustomEmbed, createErrorEmbed, createProgressBar } = require('../../utils/embeds');
 const { validatePremiumLicense } = require('../../utils/premium_guard');
-const { Activity } = require('../../database/mongo');
+const { Guild, Activity, Shift } = require('../../database/mongo');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('automation_pulse')
-        .setDescription('Zenith Hyper-Apex: Macroscopic Integrity Scanning & Metabolic Heartbeat'),
+        .setDescription('⚡ Real-time automation system status — view all configured automations and their health'),
 
     async execute(interaction) {
         try {
             await interaction.deferReply();
 
-            // Zenith Hyper-Apex License Guard
             const license = await validatePremiumLicense(interaction);
             if (!license.allowed) {
                 return interaction.editReply({ embeds: [license.embed], components: license.components });
             }
 
             const guildId = interaction.guildId;
-            const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
 
-            const [commandActivities, totalActivities] = await Promise.all([
-                Activity.countDocuments({ guildId, type: 'command', createdAt: { $gte: twentyFourHoursAgo } }),
-                Activity.countDocuments({ guildId, createdAt: { $gte: twentyFourHoursAgo } })
+            const [guildData, weekActs, weekShifts] = await Promise.all([
+                Guild.findOne({ guildId }).lean(),
+                Activity.find({ guildId, createdAt: { $gte: sevenDaysAgo } }).lean(),
+                Shift.find({ guildId, startTime: { $gte: sevenDaysAgo }, endTime: { $ne: null } }).lean()
             ]);
 
-            const filtrationDensity = totalActivities > 0 ? (commandActivities / totalActivities) * 100 : 0;
-            const bpm = (60 + (filtrationDensity * 0.4)).toFixed(1);
+            const settings = guildData?.settings || {};
+            const modules = settings.modules || {};
 
-            // 1. Integrity Scanning Ribbon (ASCII)
-            const barLength = 15;
-            const scanChars = ['|', '/', '-', '\\'];
-            const scanSymbol = scanChars[Math.floor(Date.now() / 250) % 4];
-            const scanner = Array.from({ length: barLength }, (_, i) => {
-                const pos = Math.floor(Date.now() / 200) % barLength;
-                return i === pos ? scanSymbol : '=';
-            }).join('');
+            // Real system statuses from DB config
+            const systems = [
+                {
+                    name: '🎫 Ticket System',
+                    active: !!settings.logChannel || modules.tickets,
+                    detail: settings.logChannel ? `Log channel: <#${settings.logChannel}>` : 'Not configured'
+                },
+                {
+                    name: '🛡️ Moderation System',
+                    active: modules.moderation !== false,
+                    detail: settings.mutedRole ? `Mute role: <@&${settings.mutedRole}>` : 'No muted role set'
+                },
+                {
+                    name: '📊 Analytics Tracking',
+                    active: modules.analytics !== false,
+                    detail: `${weekActs.length} events tracked this week`
+                },
+                {
+                    name: '🔔 Activity Alerts',
+                    active: !!(settings.alerts?.enabled),
+                    detail: settings.alerts?.channelId ? `Alert channel: <#${settings.alerts.channelId}>` : 'Not configured'
+                },
+                {
+                    name: '📈 Promotion System',
+                    active: modules.automation === true,
+                    detail: settings.promotionChannel ? `Channel: <#${settings.promotionChannel}>` : 'No promotion channel set'
+                },
+                {
+                    name: '⏱️ Shift Tracking',
+                    active: weekShifts.length > 0,
+                    detail: `${weekShifts.length} shifts completed this week`
+                }
+            ];
 
-            const integrityRibbon = `\`[${scanner}]\` **${filtrationDensity.toFixed(1)}% FILTRATION**`;
+            const activeCount = systems.filter(s => s.active).length;
+            const healthPct = Math.round((activeCount / systems.length) * 100);
+            const healthBar = createProgressBar(healthPct);
 
-            // 2. Metabolic Heartbeat Ribbon
-            const heartbeat = Array.from({ length: barLength }, (_, i) => {
-                const t = (i / barLength) * Math.PI * 4;
-                const val = Math.sin(t) * Math.exp(-Math.abs(Math.sin(t / 2)) * 2);
-                return val > 0.5 ? 'Λ' : (val > 0.1 ? 'v' : '_');
-            }).join('');
-
-            const pulseRibbon = `\`[${heartbeat}]\` **${bpm} BPM PULSE**`;
+            const systemField = systems.map(s => `${s.active ? '🟢' : '🔴'} **${s.name}** — ${s.detail}`).join('\n');
 
             const embed = await createCustomEmbed(interaction, {
-                title: '🤖 Zenith Hyper-Apex: Automation Heartbeat',
+                title: `⚡ Automation Pulse — ${interaction.guild.name}`,
                 thumbnail: interaction.guild.iconURL({ dynamic: true }),
-                description: `### 🚀 Sector Metabolic Integrity\nMacroscopic visualization of automation "breathing" and signal filtration integrity for sector **${interaction.guild.name}**.\n\n**💎 ZENITH HYPER-APEX EXCLUSIVE**`,
+                description: `Real-time status of all configured automation systems.\n\n**System Health:** \`${healthBar}\` **${healthPct}%** (${activeCount}/${systems.length} active)`,
                 fields: [
-                    { name: '📡 Integrity Scanning Ribbon', value: integrityRibbon, inline: false },
-                    { name: '✨ Metabolic Heartbeat Ribbon', value: pulseRibbon, inline: false },
-                    { name: '📈 Signal Density', value: `\`${totalActivities.toLocaleString()}\` 24h`, inline: true },
-                    { name: '📉 Noise Filter', value: `\`${(100 - filtrationDensity).toFixed(1)}%\``, inline: true },
-                    { name: '⚖️ Pulse Sync', value: '`CONNECTED`', inline: true },
-                    { name: '🛡️ Core Integrity', value: '`99.9% [SHIELD]`', inline: true },
-                    { name: '🌐 Global Sync', value: '`ENCRYPTED`', inline: true }
+                    { name: '🔧 System Status', value: systemField, inline: false },
+                    { name: '⚡ Events (7d)', value: `\`${weekActs.length.toLocaleString()}\``, inline: true },
+                    { name: '🔄 Shifts (7d)', value: `\`${weekShifts.length}\``, inline: true },
+                    { name: '📌 Guild ID', value: `\`${guildId}\``, inline: true }
                 ],
-                footer: 'Automation Metabolic Matrix • V7 Automation Hyper-Apex Suite',
-                color: 'premium'
+                color: healthPct >= 80 ? 'success' : healthPct >= 50 ? 'warning' : 'error',
+                footer: 'uwu-chan • Enterprise Automation Pulse • Real DB Config'
             });
 
             await interaction.editReply({ embeds: [embed] });
-
         } catch (error) {
-            console.error('Zenith Automation Pulse Error:', error);
-            await interaction.editReply({ embeds: [createErrorEmbed('Automation Pulse failure: Unable to synchronize metabolic heartbeat.')] });
+            console.error('[automation_pulse] Error:', error);
+            const errEmbed = createErrorEmbed('Failed to load automation pulse data.');
+            if (interaction.deferred || interaction.replied) await interaction.editReply({ embeds: [errEmbed] });
+            else await interaction.reply({ embeds: [errEmbed], ephemeral: true });
         }
     }
 };
