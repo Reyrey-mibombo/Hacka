@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>STRATA — The Ultimate Discord Staff Management Bot</title>
+  <title>STRATA — Manage Your Server</title>
   <meta name="description"
     content="Automate promotions, track shifts, manage tickets and empower your staff team — 271 slash commands across 8 tiers." />
   <link rel="stylesheet" href="style.css" />
@@ -16,11 +16,12 @@
 
   <!-- ── NAV ── -->
   <nav>
-    <a class="nav-logo" href="#">
+    <a class="nav-logo" href="#"
+      onclick="document.getElementById('guildPicker').style.display='none';document.getElementById('dashboard').classList.remove('active');document.getElementById('landingPage').style.display='';">
       <span style="font-size:1.5rem">🤖</span> STRATA
       <span class="logo-badge">BOT</span>
     </a>
-    <div class="nav-links">
+    <div class="nav-links" id="navLinksDefault">
       <a href="#" data-scroll="features">Features</a>
       <a href="#" data-scroll="auto-promo">Auto-Promo</a>
       <a href="#" data-scroll="commands">Commands</a>
@@ -30,7 +31,7 @@
     <div class="nav-actions">
       <div id="navUser" style="display:none;align-items:center;gap:8px">
         <span id="navUserName" style="font-size:.84rem;font-weight:600;color:var(--text2)"></span>
-        <button class="btn btn-secondary" onclick="showDashboard()">Dashboard</button>
+        <button class="btn btn-secondary" onclick="showGuildPicker()">My Servers</button>
         <button class="btn btn-outline" onclick="logout()">Logout</button>
       </div>
       <button class="btn btn-discord" id="navLoginBtn" onclick="loginWithDiscord()">
@@ -48,17 +49,11 @@
 
   <!-- Mobile menu -->
   <div class="mobile-menu" id="mobileMenu">
-    <a href="#" data-scroll="features">Features</a>
-    <a href="#" data-scroll="auto-promo">Auto-Promo</a>
-    <a href="#" data-scroll="commands">Commands</a>
-    <a href="#" data-scroll="tiers">Pricing</a>
     <button onclick="loginWithDiscord();closeMobileMenu()">Login with Discord</button>
   </div>
 
   <!-- ════════════════════ LANDING ════════════════════ -->
   <div id="landingPage">
-
-    <!-- HERO -->
     <div class="hero">
       <div class="particles" id="particles"></div>
       <div class="hero-badge">🚀 271 Slash Commands · 8 Tiers · Real Data</div>
@@ -66,16 +61,13 @@
       <p>Automate promotions, track shifts, manage tickets, and empower your staff team — all with real data and
         beautiful embeds.</p>
       <div class="hero-actions">
-        <a href="https://discord.com/api/oauth2/authorize?client_id=1381869614685356053&permissions=8&scope=bot%20applications.commands"
-          target="_blank" class="btn btn-primary btn-lg">🤖 Add to Server — Free</a>
         <button class="btn btn-secondary btn-lg" onclick="loginWithDiscord()">
           <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
             <path
               d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03z" />
           </svg>
-          Staff Dashboard
+          Manage Your Servers
         </button>
-        <a href="https://discord.gg/smNwftEhKe" target="_blank" class="btn btn-outline btn-lg">💬 Community</a>
       </div>
       <div class="stats-bar">
         <div class="stat-item">
@@ -96,549 +88,269 @@
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- FEATURES -->
-    <div class="section-wrap" id="features">
-      <div class="section-label">Features</div>
-      <h2 class="section-title">Everything your staff team needs</h2>
-      <p class="section-sub">From free shift tracking to enterprise AI forecasting — STRATA grows with your community.
-      </p>
-      <div class="grid-3">
-        <div class="card">
-          <div class="card-icon">🎟️</div>
-          <h3>Ticket System</h3>
-          <p>Customizable panels with claim, close, DM routing, and transcript logs.</p>
-        </div>
-        <div class="card">
-          <div class="card-icon">⏱️</div>
-          <h3>Shift Tracking</h3>
-          <p>Start/end shifts, earn 1pt per 5 min, daily streaks and trophies awarded automatically.</p>
-        </div>
-        <div class="card">
-          <div class="card-icon">🚀</div>
-          <h3>Auto-Promotion</h3>
-          <p>9-point engine runs every 15 minutes. Owner gets Approve/Interview/Deny buttons via DM.</p>
-        </div>
-        <div class="card">
-          <div class="card-icon">📊</div>
-          <h3>Real Analytics</h3>
-          <p>Engagement rates, burnout detection, weekly reports, growth tracking — all from real DB data.</p>
-        </div>
-        <div class="card">
-          <div class="card-icon">🛡️</div>
-          <h3>Moderation Suite</h3>
-          <p>Ban, timeout, audit logs. Real Discord API — DM notifications, activity logs, mod channel posts.</p>
-        </div>
-        <div class="card">
-          <div class="card-icon">🔮</div>
-          <h3>AI Forecasting</h3>
-          <p>Linear regression on real activity data predicts 30-day growth — zero fake numbers.</p>
-        </div>
-        <div class="card">
-          <div class="card-icon">🏅</div>
-          <h3>Elite Badges</h3>
-          <p>Grant, view and list achievement badges. Saved to DB and delivered to user via DM.</p>
-        </div>
-        <div class="card">
-          <div class="card-icon">💎</div>
-          <h3>Interactive Dashboards</h3>
-          <p>3-tab live dashboards pulling real-time MongoDB data with button navigation.</p>
-        </div>
-        <div class="card">
-          <div class="card-icon">🌡️</div>
-          <h3>Activity Heatmaps</h3>
-          <p>Real ASCII heatmaps from genuine 24h activity — not fake random numbers.</p>
-        </div>
+  <!-- ════════════════════ GUILD PICKER ════════════════════ -->
+  <div id="guildPicker"
+    style="display:none;min-height:100vh;flex-direction:column;align-items:center;padding:120px 20px 60px">
+    <div style="max-width:1000px;width:100%">
+      <h2 style="font-size:2rem;font-weight:900;margin-bottom:8px">Select a Server</h2>
+      <p style="color:var(--text2);margin-bottom:32px">Select a server to manage. You must have the <strong>Manage
+          Server</strong> permission.</p>
+
+      <input type="text" id="guildSearch" placeholder="🔍 Search servers..." oninput="renderGuildList(this.value)"
+        style="width:100%;max-width:300px;background:var(--card);border:1px solid var(--border2);color:var(--text);padding:10px 16px;border-radius:8px;margin-bottom:24px;outline:none" />
+
+      <div id="guildGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
       </div>
     </div>
-
-    <!-- AUTO-PROMO -->
-    <div class="section-alt" id="auto-promo">
-      <div class="section-alt-inner">
-        <div class="section-label">Auto-Promotion</div>
-        <h2 class="section-title">Set it. Forget it.<br />Staff get promoted automatically.</h2>
-        <p class="section-sub">Our 9-point engine checks every 15 minutes. When someone qualifies, you decide with one
-          click from your DMs.</p>
-        <div class="rank-ladder">
-          <div class="rank-node">
-            <div class="rank-bubble">👤</div><span class="rank-label">MEMBER</span>
-          </div>
-          <div class="rank-arrow">→</div>
-          <div class="rank-node">
-            <div class="rank-bubble">🔰</div><span class="rank-label">TRIAL</span>
-          </div>
-          <div class="rank-arrow">→</div>
-          <div class="rank-node">
-            <div class="rank-bubble">⭐</div><span class="rank-label">STAFF</span>
-          </div>
-          <div class="rank-arrow">→</div>
-          <div class="rank-node">
-            <div class="rank-bubble">🌟</div><span class="rank-label">SENIOR</span>
-          </div>
-          <div class="rank-arrow">→</div>
-          <div class="rank-node">
-            <div class="rank-bubble">💎</div><span class="rank-label">MANAGER</span>
-          </div>
-          <div class="rank-arrow">→</div>
-          <div class="rank-node">
-            <div class="rank-bubble" style="border-color:var(--enterprise);box-shadow:0 0 16px rgba(241,196,15,.3)">👑
-            </div><span class="rank-label">ADMIN</span>
-          </div>
-        </div>
-        <div class="grid-3" style="margin-top:36px;grid-template-columns:repeat(auto-fill,minmax(180px,1fr))">
-          <div class="card" style="text-align:center">
-            <div style="font-size:1.4rem;margin-bottom:8px">⭐</div>
-            <h3>Points</h3>
-            <p>Earned from shifts & activities</p>
-          </div>
-          <div class="card" style="text-align:center">
-            <div style="font-size:1.4rem;margin-bottom:8px">🔄</div>
-            <h3>Shifts</h3>
-            <p>Total completed shifts</p>
-          </div>
-          <div class="card" style="text-align:center">
-            <div style="font-size:1.4rem;margin-bottom:8px">📈</div>
-            <h3>Consistency</h3>
-            <p>Activity rate over 7 days</p>
-          </div>
-          <div class="card" style="text-align:center">
-            <div style="font-size:1.4rem;margin-bottom:8px">⚠️</div>
-            <h3>Warnings</h3>
-            <p>Must be below max warnings</p>
-          </div>
-          <div class="card" style="text-align:center">
-            <div style="font-size:1.4rem;margin-bottom:8px">⏱️</div>
-            <h3>Hours</h3>
-            <p>Total on-duty shift hours</p>
-          </div>
-        </div>
-        <div style="text-align:center;margin-top:32px">
-          <button class="btn btn-primary btn-lg" onclick="loginWithDiscord()">🔍 Check My Promotion Status</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- COMMANDS -->
-    <div class="section-wrap" id="commands">
-      <div class="section-label">Commands</div>
-      <h2 class="section-title">271 Slash Commands</h2>
-      <p class="section-sub">Browse all commands across Free (v1-v2), Premium (v3-v5), and Enterprise (v6-v8) tiers.</p>
-      <div class="cmd-search-wrap" style="margin-top:28px">
-        <input type="text" id="cmdSearch" placeholder="🔍 Search commands..." />
-        <div class="cmd-filters">
-          <button class="filter-btn active" data-filter="all">All</button>
-          <button class="filter-btn" data-filter="v1">v1</button>
-          <button class="filter-btn" data-filter="v2">v2</button>
-          <button class="filter-btn" data-filter="v3">v3</button>
-          <button class="filter-btn" data-filter="v4">v4</button>
-          <button class="filter-btn" data-filter="v5">v5</button>
-          <button class="filter-btn" data-filter="v6">v6</button>
-          <button class="filter-btn" data-filter="v7">v7</button>
-          <button class="filter-btn" data-filter="v8">v8</button>
-        </div>
-      </div>
-      <div class="cmd-grid" id="cmdGrid">
-        <div style="grid-column:1/-1;color:var(--text3);text-align:center;padding:48px">Loading commands...</div>
-      </div>
-    </div>
-
-    <!-- TIERS -->
-    <div class="section-wrap" id="tiers">
-      <div class="section-label">Pricing</div>
-      <h2 class="section-title">Choose Your Tier</h2>
-      <p class="section-sub">Start free forever. Upgrade when you need more power.</p>
-      <div style="display:flex;align-items:center;gap:14px;margin:28px 0 18px;flex-wrap:wrap">
-        <label style="color:var(--text2);font-size:.87rem">Server size:</label>
-        <input type="range" min="5" max="200" value="30" oninput="updateSlider(this.value)"
-          style="flex:1;max-width:260px;accent-color:var(--accent)" />
-        <span id="sliderRec" style="font-weight:700;color:var(--accent);white-space:nowrap">Recommendation:
-          Premium</span>
-      </div>
-      <div class="grid-tiers">
-        <div class="tier-card">
-          <div class="tier-badge badge-free">🆓 FREE</div>
-          <div style="color:var(--text2);font-size:.87rem">v1 + v2 Commands</div>
-          <div class="tier-price">$0 <span>/ forever</span></div>
-          <ul class="tier-features">
-            <li><span class="check">✓</span>Shift tracking & staff profiles</li>
-            <li><span class="check">✓</span>Points, leaderboard, XP</li>
-            <li><span class="check">✓</span>Warn, promote, demote</li>
-            <li><span class="check">✓</span>Ticket system</li>
-            <li><span class="check">✓</span>Activity heatmap (ASCII)</li>
-            <li><span class="check">✓</span>Weekly reports</li>
-            <li><span class="cross">✗</span>Auto-promotion engine</li>
-            <li><span class="cross">✗</span>Advanced moderation</li>
-          </ul>
-          <a href="https://discord.gg/smNwftEhKe" target="_blank" class="btn btn-outline"
-            style="width:100%;justify-content:center">Add Free</a>
-        </div>
-        <div class="tier-card popular">
-          <div class="tier-badge badge-premium">💎 PREMIUM</div>
-          <div style="color:var(--text2);font-size:.87rem">v3 + v4 + v5 Commands</div>
-          <div class="tier-price">$9.99 <span>/ mo</span></div>
-          <ul class="tier-features">
-            <li><span class="check">✓</span>Everything in Free</li>
-            <li><span class="check">✓</span>Auto-promotion (9 checks)</li>
-            <li><span class="check">✓</span>Advanced moderation suite</li>
-            <li><span class="check">✓</span>Monthly analytics</li>
-            <li><span class="check">✓</span>Paginated audit logs</li>
-            <li><span class="check">✓</span>Growth & retention tracking</li>
-            <li><span class="check">✓</span>Priority support</li>
-            <li><span class="cross">✗</span>AI forecasting</li>
-          </ul>
-          <a href="https://discord.gg/smNwftEhKe" target="_blank" class="btn btn-premium"
-            style="width:100%;justify-content:center">💎 Buy Premium</a>
-        </div>
-        <div class="tier-card">
-          <div class="tier-badge badge-enterprise">🌟 ENTERPRISE</div>
-          <div style="color:var(--text2);font-size:.87rem">v6 + v7 + v8 Commands</div>
-          <div class="tier-price">$24.99 <span>/ mo</span></div>
-          <ul class="tier-features">
-            <li><span class="check">✓</span>Everything in Premium</li>
-            <li><span class="check">✓</span>AI growth forecasting</li>
-            <li><span class="check">✓</span>Zenith interactive dashboard</li>
-            <li><span class="check">✓</span>Elite badge system</li>
-            <li><span class="check">✓</span>Server health score</li>
-            <li><span class="check">✓</span>Smart warning spike alerts</li>
-            <li><span class="check">✓</span>Automation pulse</li>
-            <li><span class="check">✓</span>Custom server branding</li>
-          </ul>
-          <a href="https://discord.gg/smNwftEhKe" target="_blank" class="btn btn-secondary"
-            style="width:100%;justify-content:center;border-color:var(--enterprise);color:var(--enterprise)">🌟 Buy
-            Enterprise</a>
-        </div>
-      </div>
-    </div>
-
-    <!-- REVIEWS -->
-    <div class="section-alt">
-      <div class="section-alt-inner">
-        <div class="section-label">Community</div>
-        <h2 class="section-title">Loved by server owners</h2>
-        <div class="reviews-grid">
-          <div class="review-card">
-            <div class="review-stars">★★★★★</div>
-            <div class="review-txt">"STRATA replaced 3 bots we were using. The auto-promotion saves us hours each week."
-            </div>
-            <div class="review-author">
-              <div class="review-avatar" style="background:var(--accent)">A</div>
-              <div>
-                <div class="review-name">Alex</div>
-                <div class="review-server">Community Server · 2.4K members</div>
-              </div>
-            </div>
-          </div>
-          <div class="review-card">
-            <div class="review-stars">★★★★★</div>
-            <div class="review-txt">"The shift tracking and burnout detection is incredible. Mods finally get
-              recognized."</div>
-            <div class="review-author">
-              <div class="review-avatar" style="background:var(--premium)">M</div>
-              <div>
-                <div class="review-name">Maria</div>
-                <div class="review-server">Gaming Hub · 8.1K members</div>
-              </div>
-            </div>
-          </div>
-          <div class="review-card">
-            <div class="review-stars">★★★★★</div>
-            <div class="review-txt">"Enterprise's AI forecasting predicted our server growth spike before it happened.
-              Insane."</div>
-            <div class="review-author">
-              <div class="review-avatar" style="background:var(--enterprise);color:#000">J</div>
-              <div>
-                <div class="review-name">Jake</div>
-                <div class="review-server">Tech Community · 15K members</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <footer>
-      <div style="font-size:1.1rem;font-weight:800;margin-bottom:12px">🤖 STRATA</div>
-      <div class="footer-links">
-        <a href="https://discord.gg/smNwftEhKe" target="_blank">Discord</a>
-        <a href="https://github.com/Reyrey-mibombo/uwu-chan-saas" target="_blank">GitHub</a>
-        <a href="#" data-scroll="commands">Commands</a>
-        <a href="#" data-scroll="tiers">Pricing</a>
-      </div>
-      <div>© 2026 Reyrey-mibombo · MIT License · Built with Discord.js & MongoDB</div>
-    </footer>
-
-  </div><!-- /landingPage -->
+  </div>
 
   <!-- ════════════════════ DASHBOARD ════════════════════ -->
   <div class="dashboard" id="dashboard">
-
-    <!-- Overlay for mobile sidebar -->
     <div class="mobile-sidebar-overlay" id="sidebarOverlay"
       onclick="document.getElementById('sidebar').classList.remove('mobile-open');this.classList.remove('active')">
     </div>
 
-    <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
-      <div class="sidebar-guild">
-        <div class="guild-avatar-fallback" id="sideAvatarFallback">S</div>
+      <div class="sidebar-guild" onclick="showGuildPicker()"
+        style="cursor:pointer;border-bottom:1px solid var(--border)">
+        <div class="guild-avatar-fallback" id="sideAvatarFallback" style="background:var(--accent);color:#fff">—</div>
         <img class="guild-avatar-img" id="sideAvatarImg" src="" alt="" style="display:none;position:absolute">
         <div class="guild-info">
-          <div class="guild-name" id="sideUsername">Loading...</div>
-          <div class="guild-tier" id="sideRank">STRATA</div>
+          <div class="guild-name" id="sideUsername">Server Name</div>
+          <div class="guild-tier" id="sideRank" style="display:flex;align-items:center;gap:4px">STRATA<svg width="12"
+              height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 9l-7 7-7-7" />
+            </svg></div>
         </div>
       </div>
       <nav>
-        <div class="sidebar-section">Overview</div>
-        <div class="sidebar-item active" data-panel="home" onclick="switchPanel('home')"><span
-            class="icon">🏠</span>Dashboard</div>
+        <div class="sidebar-section">Management</div>
+        <div class="sidebar-item active" data-panel="overview" onclick="switchPanel('overview')"><span
+            class="icon">📊</span>Overview</div>
+        <div class="sidebar-item" data-panel="settings" onclick="switchPanel('settings')"><span
+            class="icon">⚙️</span>Settings</div>
+
         <div class="sidebar-section">Staff System</div>
         <div class="sidebar-item" data-panel="staff" onclick="switchPanel('staff')"><span class="icon">👥</span>Staff
-          List</div>
-        <div class="sidebar-item" data-panel="promo" onclick="switchPanel('promo')"><span
-            class="icon">🚀</span>Promotion Tracker</div>
+          Manager</div>
+        <div class="sidebar-item" data-panel="promoreqs" onclick="switchPanel('promoreqs')"><span
+            class="icon">🚀</span>Promotion Config</div>
         <div class="sidebar-item" data-panel="shifts" onclick="switchPanel('shifts')"><span class="icon">⏱️</span>Shift
           Log</div>
-        <div class="sidebar-item" data-panel="achievements" onclick="switchPanel('achievements')"><span
-            class="icon">🏅</span>Achievements</div>
-        <div class="sidebar-section">Analytics</div>
-        <div class="sidebar-item" data-panel="analytics" onclick="switchPanel('analytics')"><span
-            class="icon">📊</span>Analytics</div>
-        <div class="sidebar-item" data-panel="alerts" onclick="switchPanel('alerts')"><span class="icon">🚨</span>Smart
-          Alerts</div>
+        <div class="sidebar-item" data-panel="warnings" onclick="switchPanel('warnings')"><span
+            class="icon">⚠️</span>Warnings</div>
+
         <div class="sidebar-section">Account</div>
-        <div class="sidebar-item" onclick="logout()"><span class="icon">🚪</span>Back to Home</div>
+        <div class="sidebar-item" onclick="logout()"><span class="icon">🚪</span>Logout</div>
       </nav>
     </aside>
 
-    <!-- Main -->
     <main class="dash-main">
-
-      <!-- Dash top bar (mobile) -->
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
         <button onclick="toggleSidebar();document.getElementById('sidebarOverlay').classList.add('active')"
           style="background:none;border:none;color:var(--text);font-size:1.3rem;cursor:pointer;display:none"
           id="sidebarToggleBtn">☰</button>
         <div>
-          <div class="dash-greeting" id="dashGreet">Welcome back! 👋</div>
-          <div class="dash-sub">Here's your real-time staff overview.</div>
+          <div class="dash-greeting" id="dashGreet">Loading...</div>
+          <div class="dash-sub">Server Management Dashboard</div>
         </div>
-        <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
-          <img id="dashAvatarImg" src="" alt=""
-            style="display:none;width:36px;height:36px;border-radius:50%;object-fit:cover">
-        </div>
+        <div style="margin-left:auto"><img id="dashAvatarImg" src="" alt=""
+            style="display:none;width:40px;height:40px;border-radius:10px"></div>
       </div>
 
-      <!-- Panel: Home -->
-      <div class="dash-panel" id="panel-home">
+      <!-- Panel: Overview -->
+      <div class="dash-panel" id="panel-overview">
         <div class="dash-stats">
           <div class="dash-stat">
-            <div class="ds-label">Your Points</div>
-            <div class="ds-value" id="dashPts" style="color:var(--accent)">—</div>
-            <div class="prog-bar-wrap">
-              <div class="prog-bar-fill" id="barPts" style="width:0%"></div>
-            </div>
+            <div class="ds-label">Staff Tracked</div>
+            <div class="ds-value" id="ovStaff" style="color:var(--accent)">—</div>
           </div>
           <div class="dash-stat">
-            <div class="ds-label">Current Rank</div>
-            <div class="ds-value" id="dashRank" style="font-size:1.3rem">—</div>
+            <div class="ds-label">Shifts Logged</div>
+            <div class="ds-value" id="ovShifts" style="color:var(--green)">—</div>
           </div>
           <div class="dash-stat">
-            <div class="ds-label">Shifts Done</div>
-            <div class="ds-value" id="dashShifts" style="color:var(--green)">—</div>
-            <div class="prog-bar-wrap">
-              <div class="prog-bar-fill" id="barShifts"
-                style="width:0%;background:linear-gradient(90deg,var(--green),var(--zenith))"></div>
-            </div>
+            <div class="ds-label">Active Warnings</div>
+            <div class="ds-value" id="ovWarnings" style="color:var(--red)">—</div>
           </div>
           <div class="dash-stat">
-            <div class="ds-label">Consistency</div>
-            <div class="ds-value" id="dashConsistency" style="color:var(--premium)">—</div>
-            <div class="prog-bar-wrap">
-              <div class="prog-bar-fill" id="barConsist"
-                style="width:0%;background:linear-gradient(90deg,var(--premium),var(--accent))"></div>
-            </div>
-          </div>
-          <div class="dash-stat">
-            <div class="ds-label">Streak</div>
-            <div class="ds-value" id="dashStreak" style="color:var(--enterprise)">—</div>
-            <div class="ds-change" style="color:var(--text3)">🔥 Keep it going!</div>
-          </div>
-          <div class="dash-stat">
-            <div class="ds-label">Warnings</div>
-            <div class="ds-value" id="dashWarns" style="color:var(--red)">—</div>
+            <div class="ds-label">Activity (7d)</div>
+            <div class="ds-value" id="ovActivity" style="color:var(--premium)">—</div>
           </div>
         </div>
-        <div class="quick-actions">
-          <button class="btn btn-primary" onclick="showToast('✅ Use /shift_start in Discord to start a shift!')">▶ Start
-            Shift</button>
-          <button class="btn btn-secondary"
-            onclick="switchPanel('promo');document.querySelectorAll('[data-panel]').forEach(i=>i.classList.toggle('active',i.dataset.panel==='promo'))">🚀
-            Promotion</button>
-          <button class="btn btn-outline"
-            onclick="switchPanel('staff');document.querySelectorAll('[data-panel]').forEach(i=>i.classList.toggle('active',i.dataset.panel==='staff'))">👥
-            Staff List</button>
-        </div>
-        <div class="section-card">
-          <h3>🏆 Staff Leaderboard</h3>
-          <div class="table-scroll">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Staff Member</th>
-                  <th>Rank</th>
-                  <th>Points</th>
-                  <th class="hide-mobile">Shifts</th>
-                  <th class="hide-mobile">Consistency</th>
-                  <th class="hide-mobile">Progress</th>
-                </tr>
-              </thead>
-              <tbody id="staffTbody">
-                <tr>
-                  <td colspan="6" style="color:var(--text3);text-align:center;padding:20px">Loading staff data...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+        <div class="section-card" style="margin-top:24px;border-color:var(--accent)">
+          <h3 style="color:var(--accent);display:flex;align-items:center;gap:8px"><span>💎</span> Upgrade to Premium /
+            Enterprise</h3>
+          <p style="color:var(--text2);font-size:.87rem;margin-bottom:14px">Unlock advanced automation, auto-promotion
+            engine, AI forecasting, and all Enterprise commands for this server.</p>
+          <button class="btn btn-premium" onclick="window.open('https://discord.gg/smNwftEhKe')">Manage
+            Subscription</button>
         </div>
       </div>
 
-      <!-- Panel: Staff -->
+      <!-- Panel: Settings -->
+      <div class="dash-panel" id="panel-settings" style="display:none">
+        <h2 style="font-size:1.4rem;font-weight:900">⚙️ Server Settings</h2>
+        <p style="color:var(--text2);font-size:.87rem;margin-bottom:24px">Configure core staff system channels and
+          toggles.</p>
+
+        <div class="section-card" style="max-width:600px">
+          <div class="form-group">
+            <label>Moderation Logs Channel ID</label>
+            <input type="text" id="setModChannel" placeholder="e.g. 123456789012345678">
+            <p class="help-text">Where bans, kicks, timeouts, and warnings are logged.</p>
+          </div>
+          <div class="form-group" style="margin-top:20px">
+            <label>Shift Logs Channel ID</label>
+            <input type="text" id="setLogChannel" placeholder="e.g. 123456789012345678">
+            <p class="help-text">Where shift start/end/pause events are broadcast.</p>
+          </div>
+          <div class="form-group" style="margin-top:20px">
+            <label>Staff Chat Channel ID</label>
+            <input type="text" id="setStaffChannel" placeholder="e.g. 123456789012345678">
+            <p class="help-text">Where promotion notifications and level-up messages are sent.</p>
+          </div>
+          <div
+            style="margin-top:24px;border-top:1px solid var(--border);padding-top:24px;display:flex;flex-direction:column;gap:14px">
+            <label class="toggle-row"><input type="checkbox" id="chkTicket"> <span>Enable Ticket System</span></label>
+            <label class="toggle-row"><input type="checkbox" id="chkAlerts"> <span>Enable Smart Activity Alerts
+                (Enterprise)</span></label>
+            <label class="toggle-row"><input type="checkbox" id="chkAutoPromo"> <span>Enable Auto-Promotion Engine
+                (Premium)</span></label>
+          </div>
+          <button class="btn btn-primary" id="saveSettingsBtn" onclick="saveSettings()"
+            style="margin-top:30px;width:100%;justify-content:center">Save Changes</button>
+        </div>
+      </div>
+
+      <!-- Panel: Staff Manager -->
       <div class="dash-panel" id="panel-staff" style="display:none">
-        <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:4px">👥 Staff List</h2>
-        <p style="color:var(--text2);font-size:.87rem;margin-bottom:20px">All tracked staff members with live stats from
-          MongoDB.</p>
+        <h2 style="font-size:1.4rem;font-weight:900">👥 Staff Manager</h2>
+        <p style="color:var(--text2);font-size:.87rem;margin-bottom:20px">View and manage all staff metrics. Edits are
+          saved instantly to the database.</p>
         <div class="section-card">
           <div class="table-scroll">
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Staff Member</th>
+                  <th>User</th>
                   <th>Rank</th>
                   <th>Points</th>
-                  <th class="hide-mobile">Shifts</th>
-                  <th class="hide-mobile">Consistency</th>
-                  <th class="hide-mobile">Progress</th>
+                  <th>Shifts</th>
+                  <th>Consistency</th>
+                  <th>Warnings</th>
                 </tr>
               </thead>
-              <tbody id="staffTbody2">
-                <tr>
-                  <td colspan="6" style="color:var(--text3);text-align:center;padding:20px">Loading...</td>
-                </tr>
-              </tbody>
+              <tbody id="staffMgrTbody"></tbody>
             </table>
           </div>
         </div>
       </div>
 
-      <!-- Panel: Promotion -->
-      <div class="dash-panel" id="panel-promo" style="display:none">
-        <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:4px">🚀 Promotion Tracker</h2>
-        <p style="color:var(--text2);font-size:.87rem;margin-bottom:20px">Your real-time progress toward each rank —
-          pulled from your actual DB stats.</p>
-        <div id="promoTrack" class="promo-track">
-          <div style="color:var(--text3)">Loading promotion data...</div>
+      <!-- Panel: Promo Config -->
+      <div class="dash-panel" id="panel-promoreqs" style="display:none">
+        <h2 style="font-size:1.4rem;font-weight:900">🚀 Promotion Requirements</h2>
+        <p style="color:var(--text2);font-size:.87rem;margin-bottom:20px">Set the exact thresholds needed for the
+          Auto-Promotion engine to flag users for rank-ups.</p>
+        <div class="section-card" style="max-width:800px">
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Rank Target</th>
+                  <th>Points Needed</th>
+                  <th>Shifts Needed</th>
+                  <th>Consistency %</th>
+                  <th>Max Warnings</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="font-weight:700;color:var(--accent)">TRIAL</td>
+                  <td><input type="number" id="promo_trial_pts" class="sm-input"></td>
+                  <td><input type="number" id="promo_trial_shifts" class="sm-input"></td>
+                  <td><input type="number" id="promo_trial_cons" class="sm-input"></td>
+                  <td><input type="number" id="promo_trial_warn" class="sm-input"></td>
+                </tr>
+                <tr>
+                  <td style="font-weight:700;color:var(--accent)">STAFF</td>
+                  <td><input type="number" id="promo_staff_pts" class="sm-input"></td>
+                  <td><input type="number" id="promo_staff_shifts" class="sm-input"></td>
+                  <td><input type="number" id="promo_staff_cons" class="sm-input"></td>
+                  <td><input type="number" id="promo_staff_warn" class="sm-input"></td>
+                </tr>
+                <tr>
+                  <td style="font-weight:700;color:var(--premium)">SENIOR</td>
+                  <td><input type="number" id="promo_senior_pts" class="sm-input"></td>
+                  <td><input type="number" id="promo_senior_shifts" class="sm-input"></td>
+                  <td><input type="number" id="promo_senior_cons" class="sm-input"></td>
+                  <td><input type="number" id="promo_senior_warn" class="sm-input"></td>
+                </tr>
+                <tr>
+                  <td style="font-weight:700;color:var(--enterprise)">MANAGER</td>
+                  <td><input type="number" id="promo_manager_pts" class="sm-input"></td>
+                  <td><input type="number" id="promo_manager_shifts" class="sm-input"></td>
+                  <td><input type="number" id="promo_manager_cons" class="sm-input"></td>
+                  <td><input type="number" id="promo_manager_warn" class="sm-input"></td>
+                </tr>
+                <tr>
+                  <td style="font-weight:700;color:#00fff5">ADMIN</td>
+                  <td><input type="number" id="promo_admin_pts" class="sm-input"></td>
+                  <td><input type="number" id="promo_admin_shifts" class="sm-input"></td>
+                  <td><input type="number" id="promo_admin_cons" class="sm-input"></td>
+                  <td><input type="number" id="promo_admin_warn" class="sm-input"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <button class="btn btn-primary" id="savePromoBtn" onclick="savePromoReqs()" style="margin-top:24px">Save
+            Configuration</button>
         </div>
       </div>
 
       <!-- Panel: Shifts -->
       <div class="dash-panel" id="panel-shifts" style="display:none">
-        <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:4px">⏱️ Shift Log</h2>
-        <p style="color:var(--text2);font-size:.87rem;margin-bottom:20px">Your recent shift history from the database.
-        </p>
+        <h2 style="font-size:1.4rem;font-weight:900">⏱️ Shift Log</h2>
+        <div class="section-card">
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>User ID</th>
+                  <th>Start Time</th>
+                  <th>Duration</th>
+                  <th>Points</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="shiftTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel: Warnings -->
+      <div class="dash-panel" id="panel-warnings" style="display:none">
+        <h2 style="font-size:1.4rem;font-weight:900">⚠️ Active Warnings</h2>
         <div class="section-card">
           <div class="table-scroll">
             <table class="data-table">
               <thead>
                 <tr>
                   <th>Date</th>
-                  <th>Duration</th>
-                  <th>Points Earned</th>
-                  <th>Status</th>
+                  <th>User ID</th>
+                  <th>Reason</th>
+                  <th>Severity</th>
+                  <th>Action</th>
                 </tr>
               </thead>
-              <tbody id="shiftTbody">
-                <tr>
-                  <td colspan="4" style="color:var(--text3);text-align:center;padding:20px">Loading shifts...</td>
-                </tr>
-              </tbody>
+              <tbody id="warnTbody"></tbody>
             </table>
           </div>
         </div>
       </div>
-
-      <!-- Panel: Achievements -->
-      <div class="dash-panel" id="panel-achievements" style="display:none">
-        <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:4px">🏅 Achievements</h2>
-        <p style="color:var(--text2);font-size:.87rem;margin-bottom:20px">Your unlocked badges from the staff system.
-        </p>
-        <div id="achieveList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
-        </div>
-      </div>
-
-      <!-- Panel: Analytics -->
-      <div class="dash-panel" id="panel-analytics" style="display:none">
-        <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:4px">📊 Analytics</h2>
-        <p style="color:var(--text2);font-size:.87rem;margin-bottom:20px">Real 7-day engagement data from your server's
-          MongoDB activity logs.</p>
-        <div class="dash-stats">
-          <div class="dash-stat">
-            <div class="ds-label">Active Users (7d)</div>
-            <div class="ds-value" id="anlActiveUsers" style="color:var(--accent)">—</div>
-          </div>
-          <div class="dash-stat">
-            <div class="ds-label">Commands Used (7d)</div>
-            <div class="ds-value" id="anlCommands" style="color:var(--green)">—</div>
-            <div class="ds-change" id="anlCmdGrowth"></div>
-          </div>
-          <div class="dash-stat">
-            <div class="ds-label">Shifts This Week</div>
-            <div class="ds-value" id="anlShifts" style="color:var(--enterprise)">—</div>
-          </div>
-          <div class="dash-stat">
-            <div class="ds-label">Warnings (7d)</div>
-            <div class="ds-value" id="anlWarnings" style="color:var(--red)">—</div>
-          </div>
-          <div class="dash-stat">
-            <div class="ds-label">Engagement Rate</div>
-            <div class="ds-value" id="anlEngagement" style="color:var(--premium)">—</div>
-            <div class="prog-bar-wrap">
-              <div class="prog-bar-fill" id="anlEngageBar" style="width:0%"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Panel: Alerts -->
-      <div class="dash-panel" id="panel-alerts" style="display:none">
-        <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:4px">🚨 Smart Alerts</h2>
-        <p style="color:var(--text2);font-size:.87rem;margin-bottom:20px">Real-time warning spike detection and at-risk
-          user identification.</p>
-        <div style="display:flex;flex-direction:column;gap:10px">
-          <div class="card" style="border-color:var(--green);display:flex;gap:12px;align-items:center"><span
-              style="font-size:1.3rem">🟢</span>
-            <div>
-              <div style="font-weight:700">Login to see your server's alerts</div>
-              <div style="color:var(--text2);font-size:.84rem">Spike detection compares today's warnings vs 7-day
-                average — real DB data.</div>
-            </div>
-          </div>
-          <div class="card" style="display:flex;gap:12px;align-items:center"><span style="font-size:1.3rem">📊</span>
-            <div>
-              <div style="font-weight:700">At-Risk Detection</div>
-              <div style="color:var(--text2);font-size:.84rem">Identifies staff with 2+ warnings in the last 24 hours,
-                pulled from Warning collection.</div>
-            </div>
-          </div>
-          <div class="card" style="display:flex;gap:12px;align-items:center"><span style="font-size:1.3rem">🔔</span>
-            <div>
-              <div style="font-weight:700">Use /smart_alerts in Discord</div>
-              <div style="color:var(--text2);font-size:.84rem">Available on the Enterprise tier — shows spike severity
-                and recommended actions.</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
     </main>
   </div>
 
@@ -648,8 +360,8 @@
       <button class="modal-close" onclick="closeModal('loginModal')">✕</button>
       <div style="font-size:2rem;margin-bottom:10px">🤖</div>
       <h2>Login with Discord</h2>
-      <p>Connect your Discord account to view your real staff profile, track promotion progress, and access your server
-        dashboard.</p>
+      <p>Connect your Discord account to manage your servers, configure settings, and view automated staff metrics on
+        the dashboard.</p>
       <button class="discord-btn-big" onclick="doDiscordLogin()">
         <svg viewBox="0 0 24 24" fill="currentColor">
           <path
@@ -657,26 +369,10 @@
         </svg>
         Continue with Discord
       </button>
-      <p style="margin-top:14px;font-size:.75rem;color:var(--text3);text-align:center">We only request
-        <strong>identify</strong> scope. We never post on your behalf.</p>
-    </div>
-  </div>
-
-  <div class="modal-overlay" id="cmdModal">
-    <div class="modal">
-      <button class="modal-close" onclick="closeModal('cmdModal')">✕</button>
-      <h2 id="modalTitle" style="font-family:'Courier New',monospace;color:var(--accent);word-break:break-all"></h2>
-      <div id="modalBody"></div>
-      <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap">
-        <a href="https://discord.gg/smNwftEhKe" target="_blank" class="btn btn-primary"
-          style="flex:1;justify-content:center">Use in Discord</a>
-        <button class="btn btn-secondary" onclick="closeModal('cmdModal')">Close</button>
-      </div>
     </div>
   </div>
 
   <script>
-    // Show sidebar toggle btn on mobile
     if (window.innerWidth <= 768) {
       const btn = document.getElementById('sidebarToggleBtn');
       if (btn) btn.style.display = 'block';
