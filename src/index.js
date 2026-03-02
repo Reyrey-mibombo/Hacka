@@ -630,6 +630,7 @@ app.use('/api/licenses', require('./api/licenses'));
 app.use('/api/guilds', require('./api/guilds'));
 app.use('/api/stats', require('./api/stats'));
 app.use('/api/commands', require('./api/commands'));
+app.use('/api/dashboard', require('./api/routes'));
 app.use('/webhooks', require('./webhook/paymentWebhook'));
 
 const PORT = process.env.PORT || 3001;
