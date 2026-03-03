@@ -406,11 +406,14 @@ async function loadSettings(guildId) {
     try {
         const settings = await fetchAPI(`/api/dashboard/guild/${guildId}/settings`);
         if (!settings) return;
-        const set = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.value = val; };
-        set('settingLogChannel', settings.staffLogChannel || settings.logChannel);
-        set('settingPromoChannel', settings.promotionChannel || settings.promoChannel);
-        set('settingWarnThreshold', settings.warningThreshold ?? settings.warnThreshold);
-        set('settingMinShift', settings.minShiftMinutes ?? settings.minShift);
+        const set = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
+        set('settingModChannel', settings.modChannelId);
+        set('settingStaffChannel', settings.staffChannelId);
+        set('settingLogChannel', settings.logChannelId);
+        set('settingWarnThreshold', settings.warnThreshold ?? 3);
+        set('settingMinShift', settings.minShiftMinutes ?? 30);
+        const autoPromo = document.getElementById('settingAutoPromo');
+        if (autoPromo) autoPromo.checked = !!settings.autoPromotion;
     } catch { /* settings may not exist yet */ }
 }
 
@@ -418,14 +421,17 @@ async function saveSettings() {
     const guildId = currentGuild?.id;
     if (!guildId) return;
     const payload = {
-        logChannel: document.getElementById('settingLogChannel')?.value?.trim(),
-        promoChannel: document.getElementById('settingPromoChannel')?.value?.trim(),
-        warningThreshold: parseInt(document.getElementById('settingWarnThreshold')?.value) || undefined,
-        minShiftMinutes: parseInt(document.getElementById('settingMinShift')?.value) || undefined
+        modChannelId: document.getElementById('settingModChannel')?.value?.trim() || null,
+        staffChannelId: document.getElementById('settingStaffChannel')?.value?.trim() || null,
+        logChannelId: document.getElementById('settingLogChannel')?.value?.trim() || null,
+        autoPromotion: document.getElementById('settingAutoPromo')?.checked ?? false,
+        shiftTrackingEnabled: true
     };
+    // Remove null/undefined keys
+    Object.keys(payload).forEach(k => { if (payload[k] == null) delete payload[k]; });
     try {
         const res = await fetch(`${CONFIG.API_BASE}/api/dashboard/guild/${guildId}/settings`, {
-            method: 'POST',
+            method: 'PATCH',
             headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
@@ -440,23 +446,51 @@ async function loadPromotions(guildId) {
     const list = document.getElementById('promoRankList');
     if (!list) return;
     try {
-        const ranks = await fetchAPI(`/api/dashboard/guild/${guildId}/promotions`);
-        if (!Array.isArray(ranks) || !ranks.length) {
-            list.innerHTML = '<div class="table-empty">No promotion requirements configured. Use <code>/setpromo</code> in your server.</div>';
-            return;
-        }
-        list.innerHTML = ranks.map(r => `
-            <div class="promo-rank">
-                <div class="promo-rank-name">${escHtml(r.name || r.rank || 'Rank')}</div>
-                <div class="promo-rank-reqs">
-                    ${r.pointsRequired != null ? `<div class="promo-req">Points: <span>${r.pointsRequired.toLocaleString()}</span></div>` : ''}
-                    ${r.shiftsRequired != null ? `<div class="promo-req">Shifts: <span>${r.shiftsRequired}</span></div>` : ''}
-                    ${r.daysRequired != null ? `<div class="promo-req">Days: <span>${r.daysRequired}</span></div>` : ''}
-                    ${r.activityRequired != null ? `<div class="promo-req">Activity: <span>${r.activityRequired}%</span></div>` : ''}
+        const reqs = await fetchAPI(`/api/dashboard/guild/${guildId}/promotion-requirements`);
+        const ranks = ['trial', 'staff', 'senior', 'manager', 'admin'];
+        const rankLabels = { trial: '🔰 Trial', staff: '⭐ Staff', senior: '🎖️ Senior', manager: '👔 Manager', admin: '👑 Admin' };
+        list.innerHTML = ranks.map(r => {
+            const d = reqs[r] || {};
+            return `<div class="promo-rank">
+                <div class="promo-rank-name">${rankLabels[r] || r}</div>
+                <div class="promo-rank-reqs" style="gap:12px;margin-top:10px;align-items:center;flex-wrap:wrap">
+                    <div class="promo-req">Points: <span><input type="number" id="pr-${r}-pts" value="${d.points ?? 0}" class="form-input" style="width:90px;padding:6px 10px;display:inline-block"></span></div>
+                    <div class="promo-req">Shifts: <span><input type="number" id="pr-${r}-shifts" value="${d.shifts ?? 0}" class="form-input" style="width:80px;padding:6px 10px;display:inline-block"></span></div>
+                    <div class="promo-req">Consistency %: <span><input type="number" id="pr-${r}-cons" value="${d.consistency ?? 0}" class="form-input" style="width:80px;padding:6px 10px;display:inline-block"></span></div>
+                    <div class="promo-req">Max Warnings: <span><input type="number" id="pr-${r}-warn" value="${d.maxWarnings ?? 3}" class="form-input" style="width:75px;padding:6px 10px;display:inline-block"></span></div>
                 </div>
-            </div>`).join('');
+            </div>`;
+        }).join('');
+        // Add save button
+        list.innerHTML += `<div style="margin-top:24px"><button class="btn btn-primary" onclick="savePromotions()">Save Promotion Requirements</button></div>`;
     } catch {
-        list.innerHTML = '<div class="table-empty">Promotion system unavailable or not configured.</div>';
+        list.innerHTML = '<div class="table-empty">Promotion system unavailable or not configured. Use <code>/setup_promo</code> in your server first.</div>';
+    }
+}
+
+async function savePromotions() {
+    const guildId = currentGuild?.id;
+    if (!guildId) return;
+    const ranks = ['trial', 'staff', 'senior', 'manager', 'admin'];
+    const payload = {};
+    ranks.forEach(r => {
+        payload[r] = {
+            points: parseInt(document.getElementById(`pr-${r}-pts`)?.value) || 0,
+            shifts: parseInt(document.getElementById(`pr-${r}-shifts`)?.value) || 0,
+            consistency: parseInt(document.getElementById(`pr-${r}-cons`)?.value) || 0,
+            maxWarnings: parseInt(document.getElementById(`pr-${r}-warn`)?.value) ?? 3
+        };
+    });
+    try {
+        const res = await fetch(`${CONFIG.API_BASE}/api/dashboard/guild/${guildId}/promotion-requirements`, {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error();
+        toast('Promotion requirements saved ✅ — Bot will use these thresholds automatically.');
+    } catch {
+        toast('Failed to save promotion requirements.');
     }
 }
 
@@ -587,12 +621,12 @@ async function saveSystem(system, payload) {
     if (!guildId) return;
     try {
         const res = await fetch(`${CONFIG.API_BASE}/api/dashboard/guild/${guildId}/systems/${system}`, {
-            method: 'POST',
+            method: 'PATCH',
             headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
         if (!res.ok) throw new Error(`${res.status}`);
-        toast(`${system.charAt(0).toUpperCase() + system.slice(1)} settings saved ✅`);
+        toast(`✅ ${system.charAt(0).toUpperCase() + system.slice(1)} settings saved — bot will apply changes immediately.`);
     } catch (e) {
         toast(`Failed to save. Make sure the bot is properly authorized.`);
         console.error(e);

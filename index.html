@@ -582,22 +582,35 @@
           <div class="card-title">Server Configuration</div>
           <div class="settings-form" id="settingsForm">
             <div class="form-row">
-              <label>Staff Log Channel ID</label>
+              <label>Mod / Moderation Log Channel ID</label>
+              <input type="text" id="settingModChannel" placeholder="e.g. 123456789012345678" class="form-input">
+            </div>
+            <div class="form-row">
+              <label>Staff Channel ID <span
+                  style="color:#5c5c78;font-weight:400;text-transform:none;letter-spacing:0">(where staff commands are
+                  posted)</span></label>
+              <input type="text" id="settingStaffChannel" placeholder="e.g. 123456789012345678" class="form-input">
+            </div>
+            <div class="form-row">
+              <label>General Log Channel ID</label>
               <input type="text" id="settingLogChannel" placeholder="e.g. 123456789012345678" class="form-input">
             </div>
             <div class="form-row">
-              <label>Promotion Announcement Channel ID</label>
-              <input type="text" id="settingPromoChannel" placeholder="e.g. 123456789012345678" class="form-input">
-            </div>
-            <div class="form-row">
               <label>Warning Threshold (auto-demote)</label>
-              <input type="number" id="settingWarnThreshold" placeholder="e.g. 3" min="1" max="10" class="form-input">
+              <input type="number" id="settingWarnThreshold" placeholder="e.g. 3" min="1" max="10" class="form-input"
+                style="max-width:160px">
             </div>
             <div class="form-row">
               <label>Minimum Shift Duration (minutes)</label>
-              <input type="number" id="settingMinShift" placeholder="e.g. 30" min="5" max="480" class="form-input">
+              <input type="number" id="settingMinShift" placeholder="e.g. 30" min="5" max="480" class="form-input"
+                style="max-width:160px">
             </div>
-            <button class="btn btn-primary" onclick="saveSettings()" style="margin-top:12px">Save Settings</button>
+            <div class="form-row" style="display:flex;align-items:center;gap:14px">
+              <label style="margin:0">Auto-Promotion System</label>
+              <label class="toggle"><input type="checkbox" id="settingAutoPromo"><span
+                  class="toggle-slider"></span></label>
+            </div>
+            <button class="btn btn-primary" onclick="saveSettings()" style="margin-top:20px">Save Settings</button>
           </div>
         </div>
       </div>
