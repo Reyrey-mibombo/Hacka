@@ -1159,6 +1159,117 @@ h1 {
   background: rgba(255, 255, 255, 0.06);
 }
 
+textarea.form-input {
+  resize: vertical;
+  min-height: 80px;
+}
+
+select.form-input {
+  cursor: pointer;
+}
+
+/* ── SYSTEM MODULES (Carl-bot style) ── */
+.sys-module-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 0 36px 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0;
+}
+
+.sys-modules {
+  padding: 0 36px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.sys-module {
+  padding: 24px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.sys-module:last-child {
+  border-bottom: none;
+}
+
+.module-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.module-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+}
+
+.module-desc {
+  font-size: 0.82rem;
+  color: var(--t2);
+  line-height: 1.5;
+}
+
+.module-extra {
+  margin-top: 4px;
+}
+
+/* Toggle Switch */
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  transition: background 0.25s;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  left: 3px;
+  bottom: 3px;
+  background: #fff;
+  transition: transform 0.25s;
+}
+
+.toggle input:checked+.toggle-slider {
+  background: var(--accent);
+}
+
+.toggle input:checked+.toggle-slider::before {
+  transform: translateX(20px);
+}
+
+/* Panel header for new panels */
+.dash-panel>.sys-module-header {
+  margin-top: 28px;
+}
+
 /* Promo System */
 .promo-list {
   display: flex;

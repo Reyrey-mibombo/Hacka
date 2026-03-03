@@ -412,6 +412,26 @@
         <span>🏆</span> Leaderboard
       </div>
 
+      <div class="sidebar-section">Auto Systems</div>
+      <div class="sidebar-item" data-panel="automod" onclick="switchPanel('automod')">
+        <span>🛡️</span> Auto-Moderation
+      </div>
+      <div class="sidebar-item" data-panel="welcome" onclick="switchPanel('welcome')">
+        <span>👋</span> Welcome System
+      </div>
+      <div class="sidebar-item" data-panel="autorole" onclick="switchPanel('autorole')">
+        <span>🎭</span> Auto-Role
+      </div>
+      <div class="sidebar-item" data-panel="logging" onclick="switchPanel('logging')">
+        <span>📋</span> Server Logging
+      </div>
+      <div class="sidebar-item" data-panel="antispam" onclick="switchPanel('antispam')">
+        <span>🚫</span> Anti-Spam
+      </div>
+      <div class="sidebar-item" data-panel="tickets" onclick="switchPanel('tickets')">
+        <span>🎫</span> Ticket System
+      </div>
+
       <div class="sidebar-section">Configuration</div>
       <div class="sidebar-item" data-panel="settings" onclick="switchPanel('settings')">
         <span>⚙️</span> Settings
@@ -590,6 +610,407 @@
             rank.</p>
           <div id="promoRankList" class="promo-list">
             <div class="table-empty">Loading promotion requirements...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AUTO MODERATION -->
+      <div class="dash-panel" id="panel-automod" style="display:none">
+        <div class="sys-module-header">
+          <div>
+            <div class="card-title" style="margin:0">🛡️ Auto-Moderation</div>
+            <div class="card-desc" style="margin:6px 0 0">Automatically moderate your server. Each rule is enforced in
+              real-time by the bot.</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveAutoMod()">Save Changes</button>
+        </div>
+        <div class="sys-modules">
+          <div class="sys-module">
+            <div class="module-row">
+              <div>
+                <div class="module-title">Block Profanity</div>
+                <div class="module-desc">Delete messages containing profanity and offensive words.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="am-profanity"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="module-extra" id="am-profanity-opts" style="display:none">
+              <div class="form-row" style="margin-top:12px">
+                <label>Custom Blocked Words (comma-separated)</label>
+                <input type="text" id="am-banned-words" class="form-input" placeholder="e.g. word1, word2, word3">
+              </div>
+            </div>
+          </div>
+          <div class="sys-module">
+            <div class="module-row">
+              <div>
+                <div class="module-title">Block External Links</div>
+                <div class="module-desc">Delete messages that contain external URLs (not whitelisted).</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="am-links"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="module-extra" id="am-links-opts" style="display:none">
+              <div class="form-row" style="margin-top:12px">
+                <label>Allowed Domains (comma-separated)</label>
+                <input type="text" id="am-allowed-domains" class="form-input"
+                  placeholder="e.g. discord.com, youtube.com">
+              </div>
+            </div>
+          </div>
+          <div class="sys-module">
+            <div class="module-row">
+              <div>
+                <div class="module-title">Anti-Mention Spam</div>
+                <div class="module-desc">Timeout users who mass-mention others in a single message.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="am-mentions"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="module-extra" id="am-mentions-opts" style="display:none">
+              <div class="form-row" style="margin-top:12px">
+                <label>Max Mentions Per Message</label>
+                <input type="number" id="am-max-mentions" class="form-input" placeholder="e.g. 5" min="2" max="20"
+                  style="max-width:160px">
+              </div>
+            </div>
+          </div>
+          <div class="sys-module">
+            <div class="module-row">
+              <div>
+                <div class="module-title">Block Discord Invites</div>
+                <div class="module-desc">Auto-delete messages containing Discord invite links from other servers.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="am-invites"><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+          <div class="sys-module">
+            <div class="module-row">
+              <div>
+                <div class="module-title">Auto-Timeout on Violation</div>
+                <div class="module-desc">Temporarily timeout members who repeatedly violate rules.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="am-timeout"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="module-extra" id="am-timeout-opts" style="display:none">
+              <div class="form-row" style="margin-top:12px">
+                <label>Timeout Duration (minutes)</label>
+                <input type="number" id="am-timeout-dur" class="form-input" placeholder="e.g. 10" min="1" max="1440"
+                  style="max-width:160px">
+              </div>
+            </div>
+          </div>
+          <div class="sys-module">
+            <div class="module-row">
+              <div>
+                <div class="module-title">Log Violations</div>
+                <div class="module-desc">Send a message to a log channel whenever a rule is violated.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="am-log"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="module-extra" id="am-log-opts" style="display:none">
+              <div class="form-row" style="margin-top:12px">
+                <label>Log Channel ID</label>
+                <input type="text" id="am-log-channel" class="form-input" placeholder="e.g. 123456789012345678">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WELCOME SYSTEM -->
+      <div class="dash-panel" id="panel-welcome" style="display:none">
+        <div class="sys-module-header">
+          <div>
+            <div class="card-title" style="margin:0">👋 Welcome System</div>
+            <div class="card-desc" style="margin:6px 0 0">Send a customized welcome message when a new member joins your
+              server.</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveWelcome()">Save Changes</button>
+        </div>
+        <div class="sys-modules">
+          <div class="sys-module">
+            <div class="module-row">
+              <div>
+                <div class="module-title">Enable Welcome Messages</div>
+                <div class="module-desc">Send a message to a channel when a new member joins.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="wlc-enabled"><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+          <div class="sys-module">
+            <div class="form-row">
+              <label>Welcome Channel ID</label>
+              <input type="text" id="wlc-channel" class="form-input" placeholder="e.g. 123456789012345678">
+            </div>
+            <div class="form-row" style="margin-top:16px">
+              <label>Welcome Message <span
+                  style="color:#5c5c78;font-weight:400;text-transform:none;letter-spacing:0">(use {user} for mention,
+                  {server} for name, {count} for member count)</span></label>
+              <textarea id="wlc-message" class="form-input" rows="4"
+                placeholder="Welcome {user} to {server}! You are member #{count}."></textarea>
+            </div>
+          </div>
+          <div class="sys-module">
+            <div class="module-row">
+              <div>
+                <div class="module-title">Welcome DM</div>
+                <div class="module-desc">Also send a private DM to the new member when they join.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="wlc-dm"><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+          <div class="sys-module">
+            <div class="form-row">
+              <label>DM Message <span
+                  style="color:#5c5c78;font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+              <textarea id="wlc-dm-message" class="form-input" rows="3"
+                placeholder="Thanks for joining {server}! Read the rules and enjoy your stay."></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AUTO ROLE -->
+      <div class="dash-panel" id="panel-autorole" style="display:none">
+        <div class="sys-module-header">
+          <div>
+            <div class="card-title" style="margin:0">🎭 Auto-Role</div>
+            <div class="card-desc" style="margin:6px 0 0">Automatically assign roles to members when they join or
+              verify.</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveAutoRole()">Save Changes</button>
+        </div>
+        <div class="sys-modules">
+          <div class="sys-module">
+            <div class="module-row">
+              <div>
+                <div class="module-title">Auto-Role on Join</div>
+                <div class="module-desc">Assign a role automatically when a new member joins the server.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="ar-join"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="form-row" style="margin-top:12px">
+              <label>Role ID to Assign on Join</label>
+              <input type="text" id="ar-join-role" class="form-input" placeholder="e.g. 123456789012345678">
+            </div>
+          </div>
+          <div class="sys-module">
+            <div class="module-row">
+              <div>
+                <div class="module-title">Bot Auto-Role</div>
+                <div class="module-desc">Assign a specific role to bots that join the server.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="ar-bot"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="form-row" style="margin-top:12px">
+              <label>Role ID for Bots</label>
+              <input type="text" id="ar-bot-role" class="form-input" placeholder="e.g. 123456789012345678">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SERVER LOGGING -->
+      <div class="dash-panel" id="panel-logging" style="display:none">
+        <div class="sys-module-header">
+          <div>
+            <div class="card-title" style="margin:0">📋 Server Logging</div>
+            <div class="card-desc" style="margin:6px 0 0">Log server events to dedicated channels. Enable each log type
+              you want to track.</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveLogging()">Save Changes</button>
+        </div>
+        <div class="sys-modules">
+          <div class="sys-module">
+            <div class="module-row">
+              <div>
+                <div class="module-title">Member Join/Leave Log</div>
+                <div class="module-desc">Log when members join or leave the server.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="log-members"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="form-row" style="margin-top:12px"><label>Log Channel ID</label><input type="text"
+                id="log-members-ch" class="form-input" placeholder="Channel ID"></div>
+          </div>
+          <div class="sys-module">
+            <div class="module-row">
+              <div>
+                <div class="module-title">Message Delete/Edit Log</div>
+                <div class="module-desc">Log deleted and edited messages.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="log-messages"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="form-row" style="margin-top:12px"><label>Log Channel ID</label><input type="text"
+                id="log-messages-ch" class="form-input" placeholder="Channel ID"></div>
+          </div>
+          <div class="sys-module">
+            <div class="module-row">
+              <div>
+                <div class="module-title">Moderation Action Log</div>
+                <div class="module-desc">Log bans, kicks, mutes, timeouts, and warnings.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="log-mod"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="form-row" style="margin-top:12px"><label>Log Channel ID</label><input type="text"
+                id="log-mod-ch" class="form-input" placeholder="Channel ID"></div>
+          </div>
+          <div class="sys-module">
+            <div class="module-row">
+              <div>
+                <div class="module-title">Role Change Log</div>
+                <div class="module-desc">Log when member roles are added or removed.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="log-roles"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="form-row" style="margin-top:12px"><label>Log Channel ID</label><input type="text"
+                id="log-roles-ch" class="form-input" placeholder="Channel ID"></div>
+          </div>
+          <div class="sys-module">
+            <div class="module-row">
+              <div>
+                <div class="module-title">Voice State Log</div>
+                <div class="module-desc">Log when members join, leave, or move voice channels.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="log-voice"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="form-row" style="margin-top:12px"><label>Log Channel ID</label><input type="text"
+                id="log-voice-ch" class="form-input" placeholder="Channel ID"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ANTI SPAM -->
+      <div class="dash-panel" id="panel-antispam" style="display:none">
+        <div class="sys-module-header">
+          <div>
+            <div class="card-title" style="margin:0">🚫 Anti-Spam</div>
+            <div class="card-desc" style="margin:6px 0 0">Prevent spam in your server. Configure rate limits and
+              punishments.</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveAntiSpam()">Save Changes</button>
+        </div>
+        <div class="sys-modules">
+          <div class="sys-module">
+            <div class="module-row">
+              <div>
+                <div class="module-title">Enable Anti-Spam</div>
+                <div class="module-desc">Detect and act on spam messages.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="as-enabled"><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+          <div class="sys-module">
+            <div class="form-row">
+              <label>Max Messages Per 5 Seconds</label>
+              <input type="number" id="as-rate" class="form-input" placeholder="e.g. 5" min="2" max="20"
+                style="max-width:160px">
+            </div>
+            <div class="form-row" style="margin-top:14px">
+              <label>Punishment</label>
+              <select id="as-action" class="form-input" style="max-width:220px">
+                <option value="delete">Delete Messages Only</option>
+                <option value="timeout">Delete + Timeout (5 min)</option>
+                <option value="kick">Delete + Kick</option>
+                <option value="ban">Delete + Ban</option>
+              </select>
+            </div>
+          </div>
+          <div class="sys-module">
+            <div class="module-row">
+              <div>
+                <div class="module-title">Ignore Staff Members</div>
+                <div class="module-desc">Don't apply anti-spam rules to registered staff members.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="as-ignore-staff"><span
+                  class="toggle-slider"></span></label>
+            </div>
+          </div>
+          <div class="sys-module">
+            <div class="module-row">
+              <div>
+                <div class="module-title">Duplicate Message Filter</div>
+                <div class="module-desc">Block users from sending the same message repeatedly.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="as-dupes"><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+          <div class="sys-module">
+            <div class="form-row">
+              <label>Log Spam to Channel (optional)</label>
+              <input type="text" id="as-log-ch" class="form-input" placeholder="Channel ID">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TICKET SYSTEM -->
+      <div class="dash-panel" id="panel-tickets" style="display:none">
+        <div class="sys-module-header">
+          <div>
+            <div class="card-title" style="margin:0">🎫 Ticket System</div>
+            <div class="card-desc" style="margin:6px 0 0">Set up a support ticket system. Clicking the panel button
+              opens a private ticket channel.</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveTickets()">Save Changes</button>
+        </div>
+        <div class="sys-modules">
+          <div class="sys-module">
+            <div class="module-row">
+              <div>
+                <div class="module-title">Enable Ticket System</div>
+                <div class="module-desc">Allow members to open support tickets.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="tk-enabled"><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+          <div class="sys-module">
+            <div class="form-row">
+              <label>Ticket Panel Channel ID <span
+                  style="color:#5c5c78;font-weight:400;text-transform:none;letter-spacing:0">(where the open-ticket
+                  button is posted)</span></label>
+              <input type="text" id="tk-panel-ch" class="form-input" placeholder="Channel ID">
+            </div>
+            <div class="form-row" style="margin-top:14px">
+              <label>Ticket Category ID <span
+                  style="color:#5c5c78;font-weight:400;text-transform:none;letter-spacing:0">(new ticket channels
+                  created here)</span></label>
+              <input type="text" id="tk-category" class="form-input" placeholder="Category ID">
+            </div>
+            <div class="form-row" style="margin-top:14px">
+              <label>Support Role ID <span
+                  style="color:#5c5c78;font-weight:400;text-transform:none;letter-spacing:0">(role that can see all
+                  tickets)</span></label>
+              <input type="text" id="tk-support-role" class="form-input" placeholder="Role ID">
+            </div>
+          </div>
+          <div class="sys-module">
+            <div class="form-row">
+              <label>Ticket Open Message</label>
+              <textarea id="tk-open-msg" class="form-input" rows="3"
+                placeholder="Welcome to your ticket! A staff member will assist you shortly."></textarea>
+            </div>
+          </div>
+          <div class="sys-module">
+            <div class="module-row">
+              <div>
+                <div class="module-title">Save Ticket Transcripts</div>
+                <div class="module-desc">When a ticket is closed, save the conversation as a transcript.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="tk-transcripts"><span
+                  class="toggle-slider"></span></label>
+            </div>
+            <div class="form-row" style="margin-top:12px">
+              <label>Transcript Log Channel ID</label>
+              <input type="text" id="tk-transcript-ch" class="form-input" placeholder="Channel ID">
+            </div>
+          </div>
+          <div class="sys-module">
+            <div class="module-row">
+              <div>
+                <div class="module-title">Max Open Tickets Per User</div>
+                <div class="module-desc">Limit how many tickets one user can have open at once.</div>
+              </div>
+              <div><input type="number" id="tk-max" class="form-input" placeholder="e.g. 1" min="1" max="5"
+                  style="max-width:100px;margin-top:8px"></div>
+            </div>
           </div>
         </div>
       </div>

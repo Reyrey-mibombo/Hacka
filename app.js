@@ -540,11 +540,195 @@ function switchPanel(panel) {
         warnings: ['Warning Log', 'All warnings issued in this server.'],
         leaderboard: ['Leaderboard', 'Top staff ranked by points and activity.'],
         settings: ['Settings', 'Configure Strata for this server.'],
-        promotions: ['Auto-Promo', 'Automatic promotion requirements per rank.']
+        promotions: ['Auto-Promo', 'Automatic promotion requirements per rank.'],
+        automod: ['Auto-Moderation', 'Real-time message filtering and rule enforcement.'],
+        welcome: ['Welcome System', 'Greet new members with a custom message.'],
+        autorole: ['Auto-Role', 'Automatically assign roles when members join.'],
+        logging: ['Server Logging', 'Log server events to dedicated channels.'],
+        antispam: ['Anti-Spam', 'Rate limiting and spam prevention.'],
+        tickets: ['Ticket System', 'Member support ticket configuration.']
     };
     const [title, sub] = titles[panel] || ['Dashboard', ''];
     document.getElementById('dashTitle').textContent = title;
     document.getElementById('dashSub').textContent = sub;
+
+    // Lazy-load system settings when panel is opened
+    const guildId = currentGuild?.id;
+    if (!guildId) return;
+    if (panel === 'automod') loadSystemSettings('automod', applyAutoModUI);
+    if (panel === 'welcome') loadSystemSettings('welcome', applyWelcomeUI);
+    if (panel === 'autorole') loadSystemSettings('autorole', applyAutoRoleUI);
+    if (panel === 'logging') loadSystemSettings('logging', applyLoggingUI);
+    if (panel === 'antispam') loadSystemSettings('antispam', applyAntiSpamUI);
+    if (panel === 'tickets') loadSystemSettings('tickets', applyTicketsUI);
+}
+
+// ══════════════════════════════════════
+// SYSTEM HELPERS
+// ══════════════════════════════════════
+
+function chk(id, val) { const el = document.getElementById(id); if (el) el.checked = !!val; }
+function val(id, v) { const el = document.getElementById(id); if (el && v != null) el.value = v; }
+function getChk(id) { return document.getElementById(id)?.checked ?? false; }
+function getVal(id) { return document.getElementById(id)?.value?.trim() || undefined; }
+function getNum(id) { const n = parseInt(document.getElementById(id)?.value); return isNaN(n) ? undefined : n; }
+
+async function loadSystemSettings(system, applyFn) {
+    const guildId = currentGuild?.id;
+    if (!guildId) return;
+    try {
+        const data = await fetchAPI(`/api/dashboard/guild/${guildId}/systems/${system}`);
+        if (data) applyFn(data);
+    } catch { /* system not configured yet, use defaults */ }
+}
+
+async function saveSystem(system, payload) {
+    const guildId = currentGuild?.id;
+    if (!guildId) return;
+    try {
+        const res = await fetch(`${CONFIG.API_BASE}/api/dashboard/guild/${guildId}/systems/${system}`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error(`${res.status}`);
+        toast(`${system.charAt(0).toUpperCase() + system.slice(1)} settings saved ✅`);
+    } catch (e) {
+        toast(`Failed to save. Make sure the bot is properly authorized.`);
+        console.error(e);
+    }
+}
+
+// ── AUTO-MOD ──
+function applyAutoModUI(d) {
+    chk('am-profanity', d.blockProfanity);
+    chk('am-links', d.blockLinks);
+    chk('am-mentions', d.antiMentionSpam);
+    chk('am-invites', d.blockInvites);
+    chk('am-timeout', d.autoTimeout);
+    chk('am-log', d.logViolations);
+    val('am-banned-words', (d.bannedWords || []).join(', '));
+    val('am-allowed-domains', (d.allowedDomains || []).join(', '));
+    val('am-max-mentions', d.maxMentions);
+    val('am-timeout-dur', d.timeoutDuration);
+    val('am-log-channel', d.logChannel);
+}
+
+function saveAutoMod() {
+    saveSystem('automod', {
+        blockProfanity: getChk('am-profanity'),
+        blockLinks: getChk('am-links'),
+        antiMentionSpam: getChk('am-mentions'),
+        blockInvites: getChk('am-invites'),
+        autoTimeout: getChk('am-timeout'),
+        logViolations: getChk('am-log'),
+        bannedWords: (getVal('am-banned-words') || '').split(',').map(w => w.trim()).filter(Boolean),
+        allowedDomains: (getVal('am-allowed-domains') || '').split(',').map(d => d.trim()).filter(Boolean),
+        maxMentions: getNum('am-max-mentions'),
+        timeoutDuration: getNum('am-timeout-dur'),
+        logChannel: getVal('am-log-channel')
+    });
+}
+
+// ── WELCOME ──
+function applyWelcomeUI(d) {
+    chk('wlc-enabled', d.enabled);
+    chk('wlc-dm', d.dmEnabled);
+    val('wlc-channel', d.channelId);
+    val('wlc-message', d.message);
+    val('wlc-dm-message', d.dmMessage);
+}
+
+function saveWelcome() {
+    saveSystem('welcome', {
+        enabled: getChk('wlc-enabled'),
+        channelId: getVal('wlc-channel'),
+        message: getVal('wlc-message'),
+        dmEnabled: getChk('wlc-dm'),
+        dmMessage: getVal('wlc-dm-message')
+    });
+}
+
+// ── AUTO-ROLE ──
+function applyAutoRoleUI(d) {
+    chk('ar-join', d.joinEnabled);
+    chk('ar-bot', d.botEnabled);
+    val('ar-join-role', d.joinRoleId);
+    val('ar-bot-role', d.botRoleId);
+}
+
+function saveAutoRole() {
+    saveSystem('autorole', {
+        joinEnabled: getChk('ar-join'),
+        joinRoleId: getVal('ar-join-role'),
+        botEnabled: getChk('ar-bot'),
+        botRoleId: getVal('ar-bot-role')
+    });
+}
+
+// ── LOGGING ──
+function applyLoggingUI(d) {
+    chk('log-members', d.memberLog); val('log-members-ch', d.memberLogChannel);
+    chk('log-messages', d.messageLog); val('log-messages-ch', d.messageLogChannel);
+    chk('log-mod', d.modLog); val('log-mod-ch', d.modLogChannel);
+    chk('log-roles', d.roleLog); val('log-roles-ch', d.roleLogChannel);
+    chk('log-voice', d.voiceLog); val('log-voice-ch', d.voiceLogChannel);
+}
+
+function saveLogging() {
+    saveSystem('logging', {
+        memberLog: getChk('log-members'), memberLogChannel: getVal('log-members-ch'),
+        messageLog: getChk('log-messages'), messageLogChannel: getVal('log-messages-ch'),
+        modLog: getChk('log-mod'), modLogChannel: getVal('log-mod-ch'),
+        roleLog: getChk('log-roles'), roleLogChannel: getVal('log-roles-ch'),
+        voiceLog: getChk('log-voice'), voiceLogChannel: getVal('log-voice-ch')
+    });
+}
+
+// ── ANTI-SPAM ──
+function applyAntiSpamUI(d) {
+    chk('as-enabled', d.enabled);
+    val('as-rate', d.maxMessagesPerWindow);
+    val('as-action', d.action);
+    chk('as-ignore-staff', d.ignoreStaff);
+    chk('as-dupes', d.filterDuplicates);
+    val('as-log-ch', d.logChannel);
+}
+
+function saveAntiSpam() {
+    saveSystem('antispam', {
+        enabled: getChk('as-enabled'),
+        maxMessagesPerWindow: getNum('as-rate'),
+        action: getVal('as-action'),
+        ignoreStaff: getChk('as-ignore-staff'),
+        filterDuplicates: getChk('as-dupes'),
+        logChannel: getVal('as-log-ch')
+    });
+}
+
+// ── TICKETS ──
+function applyTicketsUI(d) {
+    chk('tk-enabled', d.enabled);
+    val('tk-panel-ch', d.panelChannelId);
+    val('tk-category', d.categoryId);
+    val('tk-support-role', d.supportRoleId);
+    val('tk-open-msg', d.openMessage);
+    chk('tk-transcripts', d.transcriptsEnabled);
+    val('tk-transcript-ch', d.transcriptChannelId);
+    val('tk-max', d.maxOpenPerUser);
+}
+
+function saveTickets() {
+    saveSystem('tickets', {
+        enabled: getChk('tk-enabled'),
+        panelChannelId: getVal('tk-panel-ch'),
+        categoryId: getVal('tk-category'),
+        supportRoleId: getVal('tk-support-role'),
+        openMessage: getVal('tk-open-msg'),
+        transcriptsEnabled: getChk('tk-transcripts'),
+        transcriptChannelId: getVal('tk-transcript-ch'),
+        maxOpenPerUser: getNum('tk-max')
+    });
 }
 
 // ══════════════════════════════════════
