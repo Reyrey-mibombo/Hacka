@@ -685,6 +685,9 @@ function switchPanel(panel) {
         ticketlogs: ['Ticket Logs', 'Operational ticket history and feedback.'],
         activitylog: ['Activity Log', 'Server-wide operational activity history.'],
         promohistory: ['Promo History', 'Promotion, demotion, and rank change records.'],
+        alerts: ['Activity Alerts', 'Automatically ping roles based on activity drop/spike.'],
+        applications: ['Applications', 'Premium form builder for staff applications.'],
+        branding: ['Custom Branding', 'Enterprise white-labeling options.'],
         settings: ['Settings', 'Configure Strata for this server.'],
         promotions: ['Auto-Promo', 'Automatic promotion requirements per rank.'],
         automod: ['Auto-Moderation', 'Real-time message filtering and rule enforcement.'],
@@ -707,6 +710,9 @@ function switchPanel(panel) {
     if (panel === 'logging') loadSystemSettings('logging', applyLoggingUI);
     if (panel === 'antispam') loadSystemSettings('antispam', applyAntiSpamUI);
     if (panel === 'tickets') loadSystemSettings('tickets', applyTicketsUI);
+    if (panel === 'alerts') loadSystemSettings('alerts', applyAlertsUI);
+    if (panel === 'applications') loadSystemSettings('applications', applyApplicationsUI);
+    if (panel === 'branding') loadSystemSettings('branding', applyBrandingUI);
     if (panel === 'ticketlogs') loadTicketLogs(guildId);
     if (panel === 'activitylog') loadActivityLog(guildId);
     if (panel === 'promohistory') loadPromoHistory(guildId);
@@ -747,6 +753,97 @@ async function saveSystem(system, payload) {
         console.error(e);
     }
 }
+
+function saveSystemSettings(system, gatherFn) {
+    saveSystem(system, gatherFn());
+}
+
+// ── ALERTS ──
+function applyAlertsUI(d) {
+    chk('settingAlertEnabled', d.enabled);
+    val('settingAlertChannel', d.channelId);
+    val('settingAlertRole', d.roleId);
+    val('settingAlertThreshold', d.threshold);
+}
+
+function gatherAlerts() {
+    return {
+        enabled: getChk('settingAlertEnabled'),
+        channelId: getVal('settingAlertChannel'),
+        roleId: getVal('settingAlertRole'),
+        threshold: getNum('settingAlertThreshold')
+    };
+}
+
+// ── APPLICATIONS ──
+function applyApplicationsUI(d) {
+    const tier = currentGuild?.tier || 'free';
+    if (tier === 'free') {
+        document.getElementById('appTierLock').style.display = 'block';
+        document.getElementById('appUIBox').style.display = 'none';
+        return;
+    }
+    document.getElementById('appTierLock').style.display = 'none';
+    document.getElementById('appUIBox').style.display = 'block';
+
+    chk('settingAppEnabled', d.enabled);
+    val('settingAppTitle', d.panelTitle);
+    val('settingAppChannel', d.applyChannelId);
+    val('settingAppReview', d.reviewChannelId);
+    val('settingAppRole', d.reviewerRoleId);
+
+    const list = document.getElementById('appQuestionsList');
+    list.innerHTML = '';
+    const qs = d.questions || ["Why do you want to join our team?", "What experience do you have?", "How active can you be?"];
+    qs.forEach(q => addAppQuestion(q));
+}
+
+function addAppQuestion(value = '') {
+    const list = document.getElementById('appQuestionsList');
+    const div = document.createElement('div');
+    div.style.display = 'flex';
+    div.style.gap = '10px';
+    div.innerHTML = `<input type="text" class="form-input app-question-input" placeholder="Enter question..." value="${escHtml(value)}" style="flex:1">
+                     <button class="btn btn-secondary" onclick="this.parentElement.remove()">🗑️</button>`;
+    list.appendChild(div);
+}
+
+function gatherApps() {
+    return {
+        enabled: getChk('settingAppEnabled'),
+        panelTitle: getVal('settingAppTitle'),
+        applyChannelId: getVal('settingAppChannel'),
+        reviewChannelId: getVal('settingAppReview'),
+        reviewerRoleId: getVal('settingAppRole'),
+        questions: Array.from(document.querySelectorAll('.app-question-input')).map(input => input.value.trim()).filter(Boolean)
+    };
+}
+
+// ── CUSTOM BRANDING ──
+function applyBrandingUI(d) {
+    const tier = currentGuild?.tier || 'free';
+    if (tier !== 'enterprise' && tier !== 'v6') {
+        document.getElementById('brandingTierLock').style.display = 'block';
+        document.getElementById('brandingUIBox').style.display = 'none';
+        return;
+    }
+    document.getElementById('brandingTierLock').style.display = 'none';
+    document.getElementById('brandingUIBox').style.display = 'block';
+
+    val('settingBrandColor', d.color || '#6c63ff');
+    val('settingBrandColorPick', d.color || '#6c63ff');
+    val('settingBrandFooter', d.footer);
+    val('settingBrandIcon', d.iconURL);
+}
+
+function gatherBranding() {
+    return {
+        color: getVal('settingBrandColor'),
+        footer: getVal('settingBrandFooter'),
+        iconURL: getVal('settingBrandIcon')
+    };
+}
+
 
 // ── AUTO-MOD ──
 function applyAutoModUI(d) {

@@ -440,8 +440,16 @@
       <div class="sidebar-item" data-panel="tickets" onclick="switchPanel('tickets')">
         <span>🎫</span> Ticket System
       </div>
-
+      <div class="sidebar-item" data-panel="alerts" onclick="switchPanel('alerts')">
+        <span>🔔</span> Activity Alerts
+      </div>
+      <div class="sidebar-item" data-panel="applications" onclick="switchPanel('applications')">
+        <span>📋</span> Applications
+      </div>
       <div class="sidebar-section">Configuration</div>
+      <div class="sidebar-item" data-panel="branding" onclick="switchPanel('branding')">
+        <span>✨</span> Custom Branding
+      </div>
       <div class="sidebar-item" data-panel="settings" onclick="switchPanel('settings')">
         <span>⚙️</span> Settings
       </div>
@@ -696,6 +704,125 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      </div>
+      <!-- ALERTS -->
+      <div class="dash-panel" id="panel-alerts" style="display:none">
+        <div class="dash-card">
+          <div class="card-title">🔔 Server Activity Alerts</div>
+          <p style="color:#9b9bb3;font-size:14px;margin-bottom:20px;">Automatically ping a role when server activity
+            plummets or spikes beyond thresholds. Available for all tiers.</p>
+          <div class="settings-form">
+            <div class="form-row">
+              <label>Enable Activity Alerts</label>
+              <div class="toggle"><input type="checkbox" id="settingAlertEnabled"><span class="slider"></span></div>
+            </div>
+            <div class="form-row">
+              <label>Alert Channel ID</label>
+              <input type="text" id="settingAlertChannel" placeholder="e.g. 1234567890123" class="form-input">
+            </div>
+            <div class="form-row">
+              <label>Pingable Role ID</label>
+              <input type="text" id="settingAlertRole" placeholder="e.g. 1234567890123" class="form-input">
+            </div>
+            <div class="form-row">
+              <label>Activity Drop Threshold %</label>
+              <input type="number" id="settingAlertThreshold" placeholder="50" class="form-input">
+            </div>
+            <button class="btn btn-primary" onclick="saveSystemSettings('alerts', gatherAlerts)"
+              style="margin-top:10px">Save Alerts Configuration</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- APPLICATIONS -->
+      <div class="dash-panel" id="panel-applications" style="display:none">
+        <div class="dash-card">
+          <div class="card-title" style="display:flex;align-items:center;gap:10px">📋 Staff Applications <span
+              class="premium-badge">PREMIUM</span></div>
+          <p style="color:#9b9bb3;font-size:14px;margin-bottom:20px;">Allow members to apply for staff via a button,
+            sending questions directly into their DMs. (Premium / Tier 2+ Required)</p>
+          <div id="appTierLock"
+            style="display:none;padding:40px;text-align:center;background:rgba(255,255,255,0.02);border-radius:10px;border:1px dashed #5c5c78;margin-bottom:20px">
+            <div style="font-size:40px;margin-bottom:10px">⭐</div>
+            <h3 style="color:#fff;margin-bottom:10px">Premium Feature</h3>
+            <p style="color:#9b9bb3">Your server must have an active license to use Custom Applications.</p>
+          </div>
+          <div class="settings-form" id="appUIBox">
+            <div class="form-row">
+              <label>Enable Application System</label>
+              <div class="toggle"><input type="checkbox" id="settingAppEnabled"><span class="slider"></span></div>
+            </div>
+            <div class="form-row">
+              <label>Embed Panel Title</label>
+              <input type="text" id="settingAppTitle" placeholder="e.g. Moderator Application" class="form-input">
+            </div>
+            <div class="form-row">
+              <label>Panel Send Channel ID <span style="font-size:12px;color:#5c5c78;font-weight:400">(Where the "Apply"
+                  button is posted)</span></label>
+              <input type="text" id="settingAppChannel" placeholder="Channel ID" class="form-input">
+            </div>
+            <div class="form-row">
+              <label>Applications Review Channel ID <span style="font-size:12px;color:#5c5c78;font-weight:400">(Where
+                  completed forms are sent)</span></label>
+              <input type="text" id="settingAppReview" placeholder="Channel ID" class="form-input">
+            </div>
+            <div class="form-row">
+              <label>Reviewer Role ID <span style="font-size:12px;color:#5c5c78;font-weight:400">(Who gets pinged for
+                  new apps)</span></label>
+              <input type="text" id="settingAppRole" placeholder="Role ID" class="form-input">
+            </div>
+            <div class="form-row">
+              <label>Custom Questions</label>
+              <div id="appQuestionsList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:10px"></div>
+              <button class="btn btn-secondary" style="width:fit-content" onclick="addAppQuestion()">+ Add
+                Question</button>
+            </div>
+            <button class="btn btn-primary" onclick="saveSystemSettings('applications', gatherApps)"
+              style="margin-top:20px">Save Application System</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- BRANDING -->
+      <div class="dash-panel" id="panel-branding" style="display:none">
+        <div class="dash-card">
+          <div class="card-title" style="display:flex;align-items:center;gap:10px">✨ Custom Branding <span
+              class="premium-badge" style="background:#ff475715;color:#ff4757;border-color:#ff475740">ENTERPRISE</span>
+          </div>
+          <p style="color:#9b9bb3;font-size:14px;margin-bottom:20px;">Completely white-label the bot. Change bot embed
+            colors, names, and watermarks to match your own community branding.</p>
+
+          <div id="brandingTierLock"
+            style="display:none;padding:40px;text-align:center;background:rgba(255,255,255,0.02);border-radius:10px;border:1px dashed #5c5c78;margin-bottom:20px">
+            <div style="font-size:40px;margin-bottom:10px">👑</div>
+            <h3 style="color:#fff;margin-bottom:10px">Enterprise Feature</h3>
+            <p style="color:#9b9bb3">Custom Branding requires the Enterprise / Tier 6 license.</p>
+          </div>
+
+          <div class="settings-form" id="brandingUIBox">
+            <div class="form-row">
+              <label>Primary Embed Brand Hex Code</label>
+              <div style="display:flex;gap:10px;align-items:center">
+                <input type="color" id="settingBrandColorPick"
+                  style="height:42px;width:50px;background:transparent;border:none;cursor:pointer" value="#6c63ff"
+                  onchange="document.getElementById('settingBrandColor').value=this.value">
+                <input type="text" id="settingBrandColor" placeholder="#FFFFFF" class="form-input"
+                  oninput="document.getElementById('settingBrandColorPick').value=this.value">
+              </div>
+            </div>
+            <div class="form-row">
+              <label>Global Footer Text</label>
+              <input type="text" id="settingBrandFooter" placeholder="e.g. MyServer Network • Administration"
+                class="form-input">
+            </div>
+            <div class="form-row">
+              <label>Global Footer Icon URL</label>
+              <input type="text" id="settingBrandIcon" placeholder="https://..." class="form-input">
+            </div>
+            <button class="btn btn-primary" onclick="saveSystemSettings('branding', gatherBranding)"
+              style="margin-top:10px">Save Branding Profile</button>
           </div>
         </div>
       </div>
