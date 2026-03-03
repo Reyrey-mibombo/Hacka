@@ -411,6 +411,15 @@
       <div class="sidebar-item" data-panel="leaderboard" onclick="switchPanel('leaderboard')">
         <span>🏆</span> Leaderboard
       </div>
+      <div class="sidebar-item" data-panel="ticketlogs" onclick="switchPanel('ticketlogs')">
+        <span>🎫</span> Ticket Logs
+      </div>
+      <div class="sidebar-item" data-panel="activitylog" onclick="switchPanel('activitylog')">
+        <span>📖</span> Activity Log
+      </div>
+      <div class="sidebar-item" data-panel="promohistory" onclick="switchPanel('promohistory')">
+        <span>🚀</span> Promo History
+      </div>
 
       <div class="sidebar-section">Auto Systems</div>
       <div class="sidebar-item" data-panel="automod" onclick="switchPanel('automod')">
@@ -569,6 +578,121 @@
               <tbody id="leaderboardBody">
                 <tr>
                   <td colspan="5" class="table-empty">Loading...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TICKET LOGS -->
+      <div class="dash-panel" id="panel-ticketlogs" style="display:none">
+        <div class="dash-card">
+          <div class="card-title">🎫 Operational Ticket Logs</div>
+          <div class="table-filters" style="display:flex; gap:10px; margin-bottom:15px;">
+            <select id="ticketLogTypeFilter" class="form-input" style="width:150px"
+              onchange="loadTicketLogs(currentGuild?.id)">
+              <option value="">All Types</option>
+              <option value="report_staff">Staff Reports</option>
+              <option value="feedback">Feedback</option>
+            </select>
+            <select id="ticketLogStatusFilter" class="form-input" style="width:150px"
+              onchange="loadTicketLogs(currentGuild?.id)">
+              <option value="all">All Statuses</option>
+              <option value="open">Open / Pending</option>
+              <option value="claimed">Claimed</option>
+              <option value="closed">Closed</option>
+            </select>
+            <button class="btn btn-secondary" onclick="loadTicketLogs(currentGuild?.id)">🔄 Refresh</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Ticket ID</th>
+                  <th>Originator</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Details</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody id="ticketlogsBody">
+                <tr>
+                  <td colspan="6" class="table-empty">Loading tickets...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTIVITY LOG -->
+      <div class="dash-panel" id="panel-activitylog" style="display:none">
+        <div class="dash-card">
+          <div class="card-title">📖 Server Activity Log</div>
+          <div class="table-filters" style="margin-bottom:15px;">
+            <button class="btn btn-secondary" onclick="loadActivityLog(currentGuild?.id)">🔄 Refresh Latest</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>User ID</th>
+                  <th>Action Type</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody id="activitylogBody">
+                <tr>
+                  <td colspan="4" class="table-empty">Loading activity...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PROMO HISTORY -->
+      <div class="dash-panel" id="panel-promohistory" style="display:none">
+        <div class="dash-card">
+          <div class="card-title">🚀 Promotion & Demotion History</div>
+          <div class="table-filters" style="margin-bottom:15px;">
+            <button class="btn btn-secondary" onclick="loadPromoHistory(currentGuild?.id)">🔄 Refresh Log</button>
+          </div>
+          <div class="table-wrap" style="margin-bottom:20px;">
+            <h3 style="color:#fff;font-size:14px;margin-bottom:10px">Recent Rank Changes</h3>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>User ID</th>
+                  <th>Event</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody id="promohistoryBody">
+                <tr>
+                  <td colspan="4" class="table-empty">Loading history...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="table-wrap">
+            <h3 style="color:#fff;font-size:14px;margin-bottom:10px">Recently Promoted Staff</h3>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Staff Member</th>
+                  <th>Current Rank</th>
+                  <th>Points</th>
+                  <th>Last Promoted</th>
+                </tr>
+              </thead>
+              <tbody id="recentpromotionsBody">
+                <tr>
+                  <td colspan="4" class="table-empty">Loading staff...</td>
                 </tr>
               </tbody>
             </table>

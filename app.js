@@ -402,6 +402,115 @@ async function loadLeaderboard(guildId) {
     }
 }
 
+async function loadTicketLogs(guildId) {
+    const tbody = document.getElementById('ticketlogsBody');
+    if (!tbody) return;
+    const type = document.getElementById('ticketLogTypeFilter')?.value || '';
+    const status = document.getElementById('ticketLogStatusFilter')?.value || 'all';
+
+    tbody.innerHTML = '<tr><td colspan="6" class="table-empty">Loading tickets...</td></tr>';
+    try {
+        const data = await fetchAPI(`/api/dashboard/guild/${guildId}/ticket-logs?type=${type}&status=${status}`);
+        if (!Array.isArray(data) || !data.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="table-empty">No tickets found.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(t => {
+            const statusColors = { open: '#f1c40f', claimed: '#00b7ff', closed: '#5c5c78' };
+            const statusTxt = { open: 'Pending', claimed: 'Claimed', closed: 'Closed' };
+            const sColor = statusColors[t.status] || '#fff';
+
+            let details = '';
+            if (t.category === 'report_staff') {
+                details = `<div style="font-size:12px;color:#9b9bb3">Target: ${escHtml(t.staffName || 'Unknown')}</div>
+                           <div style="font-size:12px;color:#9b9bb3">Reason: ${escHtml(t.reason || 'None')}</div>`;
+            } else if (t.category === 'feedback') {
+                details = `<div style="font-size:12px;color:#9b9bb3">Feedback: ${escHtml(t.feedback || 'None')}</div>`;
+            }
+
+            return `<tr>
+                <td style="font-family:monospace;color:#6c63ff">${t.id}</td>
+                <td><div class="member-row"><span style="font-weight:600">${escHtml(t.username)}</span></div></td>
+                <td><span style="background:rgba(255,255,255,0.05);padding:4px 8px;border-radius:4px;font-size:12px">${escHtml(t.category)}</span></td>
+                <td style="color:${sColor};font-weight:600">${statusTxt[t.status] || t.status}</td>
+                <td>${details}</td>
+                <td style="color:#9b9bb3;font-size:13px">${fmtDate(new Date(t.createdAt))}</td>
+            </tr>`;
+        }).join('');
+    } catch {
+        tbody.innerHTML = '<tr><td colspan="6" class="table-empty">Failed to load tickets.</td></tr>';
+    }
+}
+
+async function loadActivityLog(guildId) {
+    const tbody = document.getElementById('activitylogBody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="4" class="table-empty">Loading activity...</td></tr>';
+    try {
+        const data = await fetchAPI(`/api/dashboard/guild/${guildId}/activity-logs`);
+        if (!Array.isArray(data) || !data.length) {
+            tbody.innerHTML = '<tr><td colspan="4" class="table-empty">No activity found.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(a => {
+            return `<tr>
+                <td style="color:#9b9bb3;font-size:13px">${fmtDate(new Date(a.createdAt))}</td>
+                <td style="font-family:monospace;color:#6c63ff">${a.userId || 'System'}</td>
+                <td><span style="background:rgba(255,255,255,0.05);padding:4px 8px;border-radius:4px;font-size:12px">${escHtml(a.type)}</span></td>
+                <td>${escHtml(a.meta || '—')}</td>
+            </tr>`;
+        }).join('');
+    } catch {
+        tbody.innerHTML = '<tr><td colspan="4" class="table-empty">Failed to load activity log.</td></tr>';
+    }
+}
+
+async function loadPromoHistory(guildId) {
+    const actBody = document.getElementById('promohistoryBody');
+    const recBody = document.getElementById('recentpromotionsBody');
+    if (!actBody || !recBody) return;
+    actBody.innerHTML = '<tr><td colspan="4" class="table-empty">Loading history...</td></tr>';
+    recBody.innerHTML = '<tr><td colspan="4" class="table-empty">Loading staff...</td></tr>';
+    try {
+        const data = await fetchAPI(`/api/dashboard/guild/${guildId}/promo-history`);
+
+        if (!data.activityLog || !data.activityLog.length) {
+            actBody.innerHTML = '<tr><td colspan="4" class="table-empty">No recent rank changes.</td></tr>';
+        } else {
+            actBody.innerHTML = data.activityLog.map(a => {
+                const isPromo = String(a.meta).toLowerCase().includes('promote') || a.type === 'promotion';
+                const color = isPromo ? '#00e096' : '#ff4757';
+                return `<tr>
+                    <td style="color:#9b9bb3;font-size:13px">${fmtDate(new Date(a.createdAt))}</td>
+                    <td style="font-family:monospace;color:#6c63ff">${a.userId || '—'}</td>
+                    <td style="color:${color};font-weight:600">${isPromo ? 'Promotion' : 'Demotion/Action'}</td>
+                    <td>${escHtml(a.meta || '—')}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        if (!data.promotions || !data.promotions.length) {
+            recBody.innerHTML = '<tr><td colspan="4" class="table-empty">No recent promotions.</td></tr>';
+        } else {
+            recBody.innerHTML = data.promotions.map(u => {
+                const avatarUrl = u.avatar ? `https://cdn.discordapp.com/avatars/${u.userId}/${u.avatar}.png` : `https://cdn.discordapp.com/embed/avatars/${(Number(u.userId || 0) % 5)}.png`;
+                return `<tr>
+                    <td><div class="member-row">
+                        <img class="member-avatar" src="${avatarUrl}" style="width:28px;height:28px" onerror="this.textContent='?'">
+                        <span style="font-weight:600">${escHtml(u.username)}</span>
+                    </div></td>
+                    <td><span style="background:rgba(108,99,255,0.1);color:#6c63ff;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600">${escHtml((u.currentRank || 'unknown').toUpperCase())}</span></td>
+                    <td style="color:#00e096;font-weight:600">${(u.points || 0).toLocaleString()}</td>
+                    <td style="color:#9b9bb3">${u.lastPromotionDate ? fmtDate(new Date(u.lastPromotionDate)) : '—'}</td>
+                </tr>`;
+            }).join('');
+        }
+    } catch {
+        actBody.innerHTML = '<tr><td colspan="4" class="table-empty">Failed to load history.</td></tr>';
+        recBody.innerHTML = '<tr><td colspan="4" class="table-empty">Failed to load staff.</td></tr>';
+    }
+}
+
 async function loadSettings(guildId) {
     try {
         const settings = await fetchAPI(`/api/dashboard/guild/${guildId}/settings`);
@@ -573,6 +682,9 @@ function switchPanel(panel) {
         shifts: ['Shift Logs', 'Complete shift history for this server.'],
         warnings: ['Warning Log', 'All warnings issued in this server.'],
         leaderboard: ['Leaderboard', 'Top staff ranked by points and activity.'],
+        ticketlogs: ['Ticket Logs', 'Operational ticket history and feedback.'],
+        activitylog: ['Activity Log', 'Server-wide operational activity history.'],
+        promohistory: ['Promo History', 'Promotion, demotion, and rank change records.'],
         settings: ['Settings', 'Configure Strata for this server.'],
         promotions: ['Auto-Promo', 'Automatic promotion requirements per rank.'],
         automod: ['Auto-Moderation', 'Real-time message filtering and rule enforcement.'],
@@ -586,7 +698,7 @@ function switchPanel(panel) {
     document.getElementById('dashTitle').textContent = title;
     document.getElementById('dashSub').textContent = sub;
 
-    // Lazy-load system settings when panel is opened
+    // Lazy-load system settings and log panels when opened
     const guildId = currentGuild?.id;
     if (!guildId) return;
     if (panel === 'automod') loadSystemSettings('automod', applyAutoModUI);
@@ -595,6 +707,9 @@ function switchPanel(panel) {
     if (panel === 'logging') loadSystemSettings('logging', applyLoggingUI);
     if (panel === 'antispam') loadSystemSettings('antispam', applyAntiSpamUI);
     if (panel === 'tickets') loadSystemSettings('tickets', applyTicketsUI);
+    if (panel === 'ticketlogs') loadTicketLogs(guildId);
+    if (panel === 'activitylog') loadActivityLog(guildId);
+    if (panel === 'promohistory') loadPromoHistory(guildId);
 }
 
 // ══════════════════════════════════════
