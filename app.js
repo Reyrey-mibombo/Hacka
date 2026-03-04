@@ -744,7 +744,9 @@ async function loadSystemSettings(system, applyFn) {
     const guildId = currentGuild?.id;
     if (!guildId) return;
     try {
-        const data = await fetchAPI(`/api/dashboard/guild/${guildId}/systems/${system}`);
+        const isRootNode = ['alerts', 'applications', 'branding'].includes(system);
+        const endpoint = isRootNode ? `/api/dashboard/guild/${guildId}/${system}` : `/api/dashboard/guild/${guildId}/systems/${system}`;
+        const data = await fetchAPI(endpoint);
         if (data) applyFn(data);
     } catch { /* system not configured yet, use defaults */ }
 }
@@ -753,7 +755,9 @@ async function saveSystem(system, payload) {
     const guildId = currentGuild?.id;
     if (!guildId) return;
     try {
-        const res = await fetch(`${CONFIG.API_BASE}/api/dashboard/guild/${guildId}/systems/${system}`, {
+        const isRootNode = ['alerts', 'applications', 'branding'].includes(system);
+        const endpoint = isRootNode ? `/api/dashboard/guild/${guildId}/${system}` : `/api/dashboard/guild/${guildId}/systems/${system}`;
+        const res = await fetch(`${CONFIG.API_BASE}${endpoint}`, {
             method: 'PATCH',
             headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
