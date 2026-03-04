@@ -443,6 +443,9 @@
       <div class="sidebar-item" data-panel="customcommands" onclick="switchPanel('customcommands')">
         <span>🤖</span> Custom Commands
       </div>
+      <div class="sidebar-item" data-panel="staffrewards" onclick="switchPanel('staffrewards')">
+        <span>🏆</span> Staff Rewards
+      </div>
       <div class="sidebar-item" data-panel="alerts" onclick="switchPanel('alerts')">
         <span>🔔</span> Activity Alerts
       </div>
@@ -1287,17 +1290,58 @@
         <div class="sys-module-header">
           <div>
             <div class="card-title" style="margin:0">🤖 Custom Commands & Auto-Responder</div>
-            <div class="card-desc" style="margin:6px 0 0">Create your own commands (e.g. !rules) and automatic replies for common questions.</div>
+            <div class="card-desc" style="margin:6px 0 0">Create your own commands (e.g. !rules) and automatic replies
+              for common questions.</div>
           </div>
           <button class="btn btn-primary btn-sm" onclick="saveCustomCommands()">Save All Commands</button>
         </div>
         <div class="sys-modules">
-          <div class="sys-module" style="padding:24px;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);text-align:center;cursor:pointer;border-radius:12px;margin-bottom:20px" onclick="addCustomCommand()">
+          <div class="sys-module"
+            style="padding:24px;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);text-align:center;cursor:pointer;border-radius:12px;margin-bottom:20px"
+            onclick="addCustomCommand()">
             <span style="font-size:1.5rem;display:block;margin-bottom:8px">+</span>
             <span style="font-weight:600;color:var(--primary-color)">Create New Custom Command</span>
           </div>
           <div id="customCommandsList" style="display:flex;flex-direction:column;gap:15px">
             <!-- Commands will be rendered here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- STAFF REWARDS -->
+      <div class="dash-panel" id="panel-staffrewards" style="display:none">
+        <div class="sys-module-header">
+          <div>
+            <div class="card-title" style="margin:0">🏆 Staff Achievements & Role Rewards</div>
+            <div class="card-desc" style="margin:6px 0 0">Incentivize your staff with custom badges and automated
+              Discord roles based on their performance.</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveStaffRewards()">Save All Rewards</button>
+        </div>
+
+        <div class="sys-modules">
+          <!-- Achievements Section -->
+          <div class="card-title" style="font-size:1.1rem;margin:20px 0 10px 5px">🏅 Custom Achievements (Badges)</div>
+          <div id="achievementsList" style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px">
+            <!-- Achievements rendered here -->
+          </div>
+          <div class="sys-module"
+            style="padding:15px;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);text-align:center;cursor:pointer;border-radius:10px"
+            onclick="addAchievement()">
+            <span style="color:var(--primary-color);font-weight:600">+ Add New Achievement Badge</span>
+          </div>
+
+          <hr style="border:0;border-top:1px solid rgba(255,255,255,0.05);margin:30px 0">
+
+          <!-- Role Rewards Section -->
+          <div class="card-title" style="font-size:1.1rem;margin:20px 0 10px 5px">🎭 Automated Role Rewards</div>
+          <div id="roleRewardsList" style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px">
+            <!-- Role rewards rendered here -->
+          </div>
+          <div class="sys-module"
+            style="padding:15px;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);text-align:center;cursor:pointer;border-radius:10px"
+            onclick="addRoleReward()">
+            <span style="color:var(--primary-color);font-weight:600">+ Add New Role Reward</span>
           </div>
         </div>
       </div>

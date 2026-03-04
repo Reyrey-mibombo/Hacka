@@ -734,6 +734,125 @@ async function saveCustomCommands() {
     }
 }
 
+// ── STAFF REWARDS ───────────────────────────────────────────
+let currentAchievements = [];
+let currentRoleRewards = [];
+
+async function loadStaffRewards(guildId) {
+    try {
+        const data = await fetchAPI(`/api/dashboard/guild/${guildId}/staff-rewards`);
+        currentAchievements = data.achievements || [];
+        currentRoleRewards = data.roleRewards || [];
+        renderStaffRewards();
+    } catch {
+        toast('Failed to load rewards.');
+    }
+}
+
+function renderStaffRewards() {
+    const aList = document.getElementById('achievementsList');
+    const rList = document.getElementById('roleRewardsList');
+    if (!aList || !rList) return;
+
+    // Render Achievements
+    if (currentAchievements.length === 0) {
+        aList.innerHTML = '<div class="table-empty">No achievements defined. Staff work for nothing!</div>';
+    } else {
+        aList.innerHTML = currentAchievements.map((ach, idx) => `
+            <div class="sys-module" style="background:rgba(255,255,255,0.03);padding:15px;border:1px solid rgba(255,255,255,0.05)">
+                <div style="display:flex;gap:15px;align-items:start">
+                    <input type="text" value="${ach.icon || '🏅'}" onchange="updateReward(${idx}, 'icon', this.value, true)" class="form-input" style="width:50px;text-align:center" placeholder="Icon">
+                    <div style="flex:1">
+                        <div style="display:flex;gap:10px;margin-bottom:10px">
+                            <input type="text" value="${ach.name}" onchange="updateReward(${idx}, 'name', this.value, true)" class="form-input" placeholder="Achievement Name">
+                            <select onchange="updateReward(${idx}, 'criteria.type', this.value, true)" class="form-input" style="width:140px">
+                                <option value="points" ${ach.criteria?.type === 'points' ? 'selected' : ''}>Points</option>
+                                <option value="shifts" ${ach.criteria?.type === 'shifts' ? 'selected' : ''}>Shifts</option>
+                                <option value="consistency" ${ach.criteria?.type === 'consistency' ? 'selected' : ''}>Consistency</option>
+                            </select>
+                            <input type="number" value="${ach.criteria?.value || 0}" onchange="updateReward(${idx}, 'criteria.value', this.value, true)" class="form-input" style="width:100px" placeholder="Goal">
+                        </div>
+                        <textarea onchange="updateReward(${idx}, 'description', this.value, true)" class="form-input" rows="1" placeholder="Description/Criteria text">${ach.description || ''}</textarea>
+                    </div>
+                    <button class="btn btn-ghost btn-sm" style="color:#ff4757" onclick="removeReward(${idx}, true)">🗑️</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // Render Role Rewards
+    if (currentRoleRewards.length === 0) {
+        rList.innerHTML = '<div class="table-empty">No automated roles defined. Set some point goals!</div>';
+    } else {
+        rList.innerHTML = currentRoleRewards.map((rr, idx) => `
+            <div class="sys-module" style="background:rgba(255,255,255,0.03);padding:15px;border:1px solid rgba(255,255,255,0.05)">
+                <div style="display:flex;gap:15px;align-items:center">
+                    <input type="text" value="${rr.name || ''}" onchange="updateReward(${idx}, 'name', this.value, false)" class="form-input" placeholder="Display Name (e.g. Veteran)">
+                    <input type="text" value="${rr.roleId}" onchange="updateReward(${idx}, 'roleId', this.value, false)" class="form-input" placeholder="Discord Role ID">
+                    <div style="display:flex;align-items:center;gap:10px;white-space:nowrap">
+                        <span style="font-size:12px;color:#5c5c78">at</span>
+                        <input type="number" value="${rr.requiredPoints}" onchange="updateReward(${idx}, 'requiredPoints', this.value, false)" class="form-input" style="width:100px" placeholder="Points">
+                        <span style="font-size:12px;color:#5c5c78">PTS</span>
+                    </div>
+                    <button class="btn btn-ghost btn-sm" style="color:#ff4757" onclick="removeReward(${idx}, false)">🗑️</button>
+                </div>
+            </div>
+        `).join('');
+    }
+}
+
+function updateReward(idx, key, val, isAch) {
+    const arr = isAch ? currentAchievements : currentRoleRewards;
+    if (key.includes('.')) {
+        const [k1, k2] = key.split('.');
+        arr[idx][k1][k2] = val;
+    } else {
+        arr[idx][key] = val;
+    }
+}
+
+function addAchievement() {
+    currentAchievements.push({
+        id: 'ach_' + Date.now(),
+        name: 'New Achievement',
+        icon: '🏅',
+        description: 'Earned for performance',
+        criteria: { type: 'points', value: 100 }
+    });
+    renderStaffRewards();
+}
+
+function addRoleReward() {
+    currentRoleRewards.push({
+        name: 'New Milestone',
+        roleId: '',
+        requiredPoints: 500
+    });
+    renderStaffRewards();
+}
+
+function removeReward(idx, isAch) {
+    if (isAch) currentAchievements.splice(idx, 1);
+    else currentRoleRewards.splice(idx, 1);
+    renderStaffRewards();
+}
+
+async function saveStaffRewards() {
+    const guildId = currentGuild?.id;
+    if (!guildId) return;
+    try {
+        const res = await fetch(`${CONFIG.API_BASE}/api/dashboard/guild/${guildId}/staff-rewards`, {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ achievements: currentAchievements, roleRewards: currentRoleRewards })
+        });
+        if (!res.ok) throw new Error();
+        toast('Staff Rewards saved successfully! 🏆');
+    } catch {
+        toast('Failed to save staff rewards.');
+    }
+}
+
 function initChart(shifts) {
     const ctx = document.getElementById('activityChart')?.getContext('2d');
     if (!ctx) return;
@@ -827,7 +946,8 @@ function switchPanel(panel) {
         logging: ['Server Logging', 'Log server events to dedicated channels.'],
         antispam: ['Anti-Spam', 'Rate limiting and spam prevention.'],
         tickets: ['Ticket System', 'Member support ticket configuration.'],
-        customcommands: ['Custom Commands', 'Manage your own command triggers and auto-replies.']
+        customcommands: ['Custom Commands', 'Manage your own command triggers and auto-replies.'],
+        staffrewards: ['Staff Rewards', 'Define custom achievements and point-based role rewards.']
     };
     const [title, sub] = titles[panel] || ['Dashboard', ''];
     document.getElementById('dashTitle').textContent = title;
@@ -849,6 +969,7 @@ function switchPanel(panel) {
     if (panel === 'activitylog') loadActivityLog(guildId);
     if (panel === 'promohistory') loadPromoHistory(guildId);
     if (panel === 'customcommands') loadCustomCommands(guildId);
+    if (panel === 'staffrewards') loadStaffRewards(guildId);
 }
 
 // ══════════════════════════════════════
