@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STRATA - Discord Bot Dashboard</title>
+    <link rel="stylesheet" href="/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Login Screen -->
+        <div id="login-screen" class="screen">
+            <div class="login-container">
+                <div class="logo">
+                    <i class="fas fa-layer-group"></i>
+                    <h1>STRATA</h1>
+                </div>
+                <p class="tagline">Advanced Discord Server Management</p>
+                <button id="login-btn" class="btn btn-primary btn-large">
+                    <i class="fab fa-discord"></i>
+                    Login with Discord
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Dashboard -->
+        <div id="dashboard-screen" class="screen hidden">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <i class="fas fa-layer-group"></i>
+                    <span>STRATA</span>
+                </div>
+                
+                <nav class="sidebar-nav">
+                    <div class="nav-section">
+                        <span class="nav-label">Overview</span>
+                        <a href="#" data-page="overview" class="nav-item active">
+                            <i class="fas fa-home"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </div>
+
+                    <div class="nav-section">
+                        <span class="nav-label">Management</span>
+                        <a href="#" data-page="staff" class="nav-item">
+                            <i class="fas fa-users"></i>
+                            <span>Staff</span>
+                        </a>
+                        <a href="#" data-page="moderation" class="nav-item">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>Moderation</span>
+                        </a>
+                        <a href="#" data-page="leveling" class="nav-item">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Leveling</span>
+                        </a>
+                        <a href="#" data-page="reaction-roles" class="nav-item">
+                            <i class="fas fa-hand-pointer"></i>
+                            <span>Reaction Roles</span>
+                        </a>
+                        <a href="#" data-page="giveaways" class="nav-item">
+                            <i class="fas fa-gift"></i>
+                            <span>Giveaways</span>
+                        </a>
+                    </div>
+
+                    <div class="nav-section">
+                        <span class="nav-label">Configuration</span>
+                        <a href="#" data-page="welcome" class="nav-item">
+                            <i class="fas fa-door-open"></i>
+                            <span>Welcome</span>
+                        </a>
+                        <a href="#" data-page="automod" class="nav-item">
+                            <i class="fas fa-robot"></i>
+                            <span>Auto-Mod</span>
+                        </a>
+                        <a href="#" data-page="logging" class="nav-item">
+                            <i class="fas fa-file-alt"></i>
+                            <span>Logging</span>
+                        </a>
+                        <a href="#" data-page="commands" class="nav-item">
+                            <i class="fas fa-terminal"></i>
+                            <span>Commands</span>
+                        </a>
+                    </div>
+
+                    <div class="nav-section">
+                        <span class="nav-label">Analytics</span>
+                        <a href="#" data-page="analytics" class="nav-item">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>Statistics</span>
+                        </a>
+                        <a href="#" data-page="economy" class="nav-item">
+                            <i class="fas fa-coins"></i>
+                            <span>Economy</span>
+                        </a>
+                    </div>
+
+                    <div class="nav-section">
+                        <span class="nav-label">Settings</span>
+                        <a href="#" data-page="settings" class="nav-item">
+                            <i class="fas fa-cog"></i>
+                            <span>Settings</span>
+                        </a>
+                    </div>
+                </nav>
+
+                <div class="sidebar-footer">
+                    <div class="user-info">
+                        <img id="user-avatar" src="" alt="">
+                        <span id="user-name"></span>
+                    </div>
+                    <button id="logout-btn" class="btn btn-icon">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="main-content">
+                <!-- Header -->
+                <header class="header">
+                    <div class="header-left">
+                        <h2 id="page-title">Dashboard</h2>
+                    </div>
+                    <div class="header-right">
+                        <select id="guild-selector" class="select">
+                            <option value="">Select Server</option>
+                        </select>
+                        <div class="tier-badge" id="tier-badge">Free</div>
+                    </div>
+                </header>
+
+                <!-- Content Pages -->
+                <div class="content">
+                    <!-- Overview Page -->
+                    <div id="page-overview" class="page active">
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-icon members">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <span class="stat-value" id="stat-members">0</span>
+                                    <span class="stat-label">Total Members</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon staff">
+                                    <i class="fas fa-user-shield"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <span class="stat-value" id="stat-staff">0</span>
+                                    <span class="stat-label">Staff Members</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon shifts">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <span class="stat-value" id="stat-shifts">0</span>
+                                    <span class="stat-label">Total Shifts</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon warnings">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <span class="stat-value" id="stat-warnings">0</span>
+                                    <span class="stat-label">Active Warnings</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="dashboard-grid">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3>Activity Chart</h3>
+                                    <select id="activity-period" class="select select-small">
+                                        <option value="7">Last 7 days</option>
+                                        <option value="30">Last 30 days</option>
+                                    </select>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="activity-chart"></canvas>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3>Recent Activity</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div id="recent-activity" class="activity-list">
+                                        <!-- Activity items will be inserted here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Staff Page -->
+                    <div id="page-staff" class="page">
+                        <div class="page-actions">
+                            <button class="btn btn-primary" id="add-staff-btn">
+                                <i class="fas fa-plus"></i> Add Staff
+                            </button>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Staff Members</h3>
+                                <input type="text" class="input search-input" placeholder="Search staff...">
+                            </div>
+                            <div class="card-body">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>User</th>
+                                            <th>Rank</th>
+                                            <th>Points</th>
+                                            <th>Shifts</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="staff-table">
+                                        <!-- Staff rows will be inserted here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Moderation Page -->
+                    <div id="page-moderation" class="page">
+                        <div class="tabs">
+                            <button class="tab-btn active" data-tab="mod-actions">Actions</button>
+                            <button class="tab-btn" data-tab="mod-warnings">Warnings</button>
+                            <button class="tab-btn" data-tab="mod-settings">Settings</button>
+                        </div>
+                        
+                        <div id="tab-mod-actions" class="tab-content active">
+                            <div class="page-actions">
+                                <button class="btn btn-danger" id="ban-btn">
+                                    <i class="fas fa-ban"></i> Ban User
+                                </button>
+                                <button class="btn btn-warning" id="warn-btn">
+                                    <i class="fas fa-exclamation-triangle"></i> Warn User
+                                </button>
+                            </div>
+                            <div class="card">
+                                <div class="card-body">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Type</th>
+                                                <th>User</th>
+                                                <th>Moderator</th>
+                                                <th>Reason</th>
+                                                <th>Date</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="mod-actions-table">
+                                            <!-- Moderation actions will be inserted here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="tab-mod-warnings" class="tab-content">
+                            <div class="card">
+                                <div class="card-body">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>User</th>
+                                                <th>Issuer</th>
+                                                <th>Reason</th>
+                                                <th>Severity</th>
+                                                <th>Date</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="warnings-table">
+                                            <!-- Warnings will be inserted here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="tab-mod-settings" class="tab-content">
+                            <div class="card">
+                                <div class="card-body">
+                                    <form id="mod-settings-form">
+                                        <div class="form-group">
+                                            <label>Warn Threshold</label>
+                                            <input type="number" class="input" id="warn-threshold" value="3">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Mod Log Channel</label>
+                                            <input type="text" class="input" id="mod-channel" placeholder="Channel ID">
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Save Settings</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Leveling Page -->
+                    <div id="page-leveling" class="page">
+                        <div class="tabs">
+                            <button class="tab-btn active" data-tab="level-config">Configuration</button>
+                            <button class="tab-btn" data-tab="level-roles">Level Roles</button>
+                            <button class="tab-btn" data-tab="level-rewards">Rewards</button>
+                            <button class="tab-btn" data-tab="level-leaderboard">Leaderboard</button>
+                        </div>
+
+                        <div id="tab-level-config" class="tab-content active">
+                            <div class="card">
+                                <div class="card-body">
+                                    <form id="leveling-config-form">
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label class="checkbox">
+                                                    <input type="checkbox" id="leveling-enabled" checked>
+                                                    <span>Enable Leveling System</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label>XP Rate Multiplier</label>
+                                                <input type="number" class="input" id="xp-rate" value="1" min="0.1" max="10" step="0.1">
+                                            </div>
+                                            <div class="form-group">
+                                                <label>XP Cooldown (seconds)</label>
+                                                <input type="number" class="input" id="xp-cooldown" value="60" min="0">
+                                            </div>
+                                        </div>
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label>Min XP per Message</label>
+                                                <input type="number" class="input" id="min-xp" value="15" min="1">
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Max XP per Message</label>
+                                                <input type="number" class="input" id="max-xp" value="25" min="1">
+                                            </div>
+                                        </div>
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label>Level Up Channel</label>
+                                                <input type="text" class="input" id="level-channel" placeholder="Channel ID (leave empty for current)">
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Level Up Message</label>
+                                            <textarea class="input" id="level-message" rows="3">Congratulations {user}, you reached level {level}!</textarea>
+                                            <small>Variables: {user}, {level}, {server}</small>
+                                        </div>
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label class="checkbox">
+                                                    <input type="checkbox" id="dm-level-up">
+                                                    <span>Send DM on Level Up</span>
+                                                </label>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="checkbox">
+                                                    <input type="checkbox" id="stack-roles" checked>
+                                                    <span>Stack Level Roles</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Save Configuration</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="tab-level-roles" class="tab-content">
+                            <div class="page-actions">
+                                <button class="btn btn-primary" id="add-level-role-btn">
+                                    <i class="fas fa-plus"></i> Add Level Role
+                                </button>
+                            </div>
+                            <div class="card">
+                                <div class="card-body">
+                                    <table class="data-table" id="level-roles-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Level</th>
+                                                <th>Role</th>
+                                                <th>Remove Previous</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Level roles will be inserted here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="tab-level-rewards" class="tab-content">
+                            <div class="page-actions">
+                                <button class="btn btn-primary" id="add-level-reward-btn">
+                                    <i class="fas fa-plus"></i> Add Reward
+                                </button>
+                            </div>
+                            <div class="card">
+                                <div class="card-body">
+                                    <div id="level-rewards-list" class="rewards-grid">
+                                        <!-- Rewards will be inserted here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="tab-level-leaderboard" class="tab-content">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3>XP Leaderboard</h3>
+                                </div>
+                                <div class="card-body">
+                                    <table class="data-table" id="xp-leaderboard-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Rank</th>
+                                                <th>User</th>
+                                                <th>Level</th>
+                                                <th>XP</th>
+                                                <th>Messages</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Leaderboard will be inserted here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reaction Roles Page -->
+                    <div id="page-reaction-roles" class="page">
+                        <div class="page-actions">
+                            <button class="btn btn-primary" id="create-reaction-panel-btn">
+                                <i class="fas fa-plus"></i> Create Panel
+                            </button>
+                        </div>
+                        <div id="reaction-panels-list" class="panels-grid">
+                            <!-- Reaction panels will be inserted here -->
+                        </div>
+                    </div>
+
+                    <!-- Giveaways Page -->
+                    <div id="page-giveaways" class="page">
+                        <div class="page-actions">
+                            <button class="btn btn-primary" id="create-giveaway-btn">
+                                <i class="fas fa-plus"></i> Create Giveaway
+                            </button>
+                        </div>
+                        <div class="tabs">
+                            <button class="tab-btn active" data-tab="giveaway-active">Active</button>
+                            <button class="tab-btn" data-tab="giveaway-ended">Ended</button>
+                        </div>
+                        <div id="tab-giveaway-active" class="tab-content active">
+                            <div id="active-giveaways" class="giveaways-grid">
+                                <!-- Active giveaways will be inserted here -->
+                            </div>
+                        </div>
+                        <div id="tab-giveaway-ended" class="tab-content">
+                            <div id="ended-giveaways" class="giveaways-grid">
+                                <!-- Ended giveaways will be inserted here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Welcome Page -->
+                    <div id="page-welcome" class="page">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Welcome Settings</h3>
+                            </div>
+                            <div class="card-body">
+                                <form id="welcome-form">
+                                    <div class="form-group">
+                                        <label class="checkbox">
+                                            <input type="checkbox" id="welcome-enabled">
+                                            <span>Enable Welcome Messages</span>
+                                        </label>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Welcome Channel</label>
+                                        <input type="text" class="input" id="welcome-channel" placeholder="Channel ID">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Welcome Message</label>
+                                        <textarea class="input" id="welcome-message" rows="4"></textarea>
+                                        <small>Variables: {user}, {server}, {count}</small>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="checkbox">
+                                            <input type="checkbox" id="welcome-dm">
+                                            <span>Send Welcome DM</span>
+                                        </label>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>DM Message</label>
+                                        <textarea class="input" id="welcome-dm-message" rows="4"></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Auto-Mod Page -->
+                    <div id="page-automod" class="page">
+                        <div class="page-actions">
+                            <button class="btn btn-primary" id="add-automod-rule-btn">
+                                <i class="fas fa-plus"></i> Add Rule
+                            </button>
+                        </div>
+                        <div id="automod-rules-list" class="rules-grid">
+                            <!-- Auto-mod rules will be inserted here -->
+                        </div>
+                    </div>
+
+                    <!-- Logging Page -->
+                    <div id="page-logging" class="page">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Logging Configuration</h3>
+                            </div>
+                            <div class="card-body">
+                                <form id="logging-form">
+                                    <div class="form-group">
+                                        <label class="checkbox">
+                                            <input type="checkbox" id="log-members">
+                                            <span>Log Member Events</span>
+                                        </label>
+                                        <input type="text" class="input" id="log-members-channel" placeholder="Channel ID">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="checkbox">
+                                            <input type="checkbox" id="log-messages">
+                                            <span>Log Message Events</span>
+                                        </label>
+                                        <input type="text" class="input" id="log-messages-channel" placeholder="Channel ID">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="checkbox">
+                                            <input type="checkbox" id="log-mod">
+                                            <span>Log Moderation Actions</span>
+                                        </label>
+                                        <input type="text" class="input" id="log-mod-channel" placeholder="Channel ID">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Commands Page -->
+                    <div id="page-commands" class="page">
+                        <div class="page-actions">
+                            <button class="btn btn-primary" id="add-command-btn">
+                                <i class="fas fa-plus"></i> Add Command
+                            </button>
+                        </div>
+                        <div class="card">
+                            <div class="card-body">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Trigger</th>
+                                            <th>Type</th>
+                                            <th>Response</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="custom-commands-table">
+                                        <!-- Custom commands will be inserted here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Analytics Page -->
+                    <div id="page-analytics" class="page">
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="fas fa-comments"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <span class="stat-value" id="stat-messages">0</span>
+                                    <span class="stat-label">Messages (30d)</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="fas fa-microphone"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <span class="stat-value" id="stat-voice">0h</span>
+                                    <span class="stat-label">Voice Time (30d)</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="fas fa-user-plus"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <span class="stat-value" id="stat-joins">0</span>
+                                    <span class="stat-label">New Members (30d)</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <span class="stat-value" id="stat-growth">0%</span>
+                                    <span class="stat-label">Growth Rate</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="dashboard-grid">
+                            <div class="card wide">
+                                <div class="card-header">
+                                    <h3>Activity Overview</h3>
+                                    <select id="analytics-period" class="select select-small">
+                                        <option value="7">Last 7 days</option>
+                                        <option value="30">Last 30 days</option>
+                                        <option value="90">Last 90 days</option>
+                                    </select>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="analytics-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="dashboard-grid">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3>Top Members</h3>
+                                </div>
+                                <div class="card-body">
+                                    <table class="data-table" id="top-members-table">
+                                        <thead>
+                                            <tr>
+                                                <th>User</th>
+                                                <th>Messages</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3>Activity Heatmap</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div id="activity-heatmap"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Economy Page -->
+                    <div id="page-economy" class="page">
+                        <div class="tabs">
+                            <button class="tab-btn active" data-tab="economy-config">Configuration</button>
+                            <button class="tab-btn" data-tab="economy-shop">Shop</button>
+                            <button class="tab-btn" data-tab="economy-leaderboard">Leaderboard</button>
+                        </div>
+
+                        <div id="tab-economy-config" class="tab-content active">
+                            <div class="card">
+                                <div class="card-body">
+                                    <form id="economy-config-form">
+                                        <div class="form-group">
+                                            <label class="checkbox">
+                                                <input type="checkbox" id="economy-enabled">
+                                                <span>Enable Economy System</span>
+                                            </label>
+                                        </div>
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label>Currency Name</label>
+                                                <input type="text" class="input" id="currency-name" value="Coins">
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Currency Symbol</label>
+                                                <input type="text" class="input" id="currency-symbol" value="🪙">
+                                            </div>
+                                        </div>
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label>Daily Amount</label>
+                                                <input type="number" class="input" id="daily-amount" value="100">
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Work Cooldown (seconds)</label>
+                                                <input type="number" class="input" id="work-cooldown" value="3600">
+                                            </div>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Save Configuration</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="tab-economy-shop" class="tab-content">
+                            <div class="page-actions">
+                                <button class="btn btn-primary" id="add-shop-item-btn">
+                                    <i class="fas fa-plus"></i> Add Item
+                                </button>
+                            </div>
+                            <div id="shop-items-list" class="shop-grid">
+                                <!-- Shop items will be inserted here -->
+                            </div>
+                        </div>
+
+                        <div id="tab-economy-leaderboard" class="tab-content">
+                            <div class="card">
+                                <div class="card-body">
+                                    <table class="data-table" id="economy-leaderboard-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Rank</th>
+                                                <th>User</th>
+                                                <th>Balance</th>
+                                                <th>Bank</th>
+                                                <th>Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Settings Page -->
+                    <div id="page-settings" class="page">
+                        <div class="tabs">
+                            <button class="tab-btn active" data-tab="settings-general">General</button>
+                            <button class="tab-btn" data-tab="settings-promo">Promotion</button>
+                            <button class="tab-btn" data-tab="settings-alerts">Alerts</button>
+                        </div>
+
+                        <div id="tab-settings-general" class="tab-content active">
+                            <div class="card">
+                                <div class="card-body">
+                                    <form id="general-settings-form">
+                                        <div class="form-group">
+                                            <label>Command Prefix</label>
+                                            <input type="text" class="input" id="bot-prefix" value="!">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Language</label>
+                                            <select class="select" id="bot-language">
+                                                <option value="en">English</option>
+                                                <option value="es">Spanish</option>
+                                                <option value="fr">French</option>
+                                                <option value="de">German</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Embed Color</label>
+                                            <input type="color" class="input" id="embed-color" value="#6c63ff">
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Save Settings</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="tab-settings-promo" class="tab-content">
+                            <div class="card">
+                                <div class="card-body">
+                                    <form id="promo-settings-form">
+                                        <div class="form-group">
+                                            <label class="checkbox">
+                                                <input type="checkbox" id="auto-promo">
+                                                <span>Enable Auto-Promotion</span>
+                                            </label>
+                                        </div>
+                                        <div id="promo-requirements">
+                                            <!-- Promotion requirements will be inserted here -->
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Save Settings</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="tab-settings-alerts" class="tab-content">
+                            <div class="card">
+                                <div class="card-body">
+                                    <form id="alerts-settings-form">
+                                        <div class="form-group">
+                                            <label class="checkbox">
+                                                <input type="checkbox" id="alerts-enabled">
+                                                <span>Enable Activity Alerts</span>
+                                            </label>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Alert Channel</label>
+                                            <input type="text" class="input" id="alerts-channel" placeholder="Channel ID">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Alert Role</label>
+                                            <input type="text" class="input" id="alerts-role" placeholder="Role ID">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Activity Threshold</label>
+                                            <input type="number" class="input" id="alerts-threshold" value="50">
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Save Settings</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal Container -->
+    <div id="modal-container" class="modal-container hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modal-title">Modal Title</h3>
+                <button class="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Modal content will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/dashboard.js"></script>
+</body>
+</html>
