@@ -256,34 +256,42 @@ async function loadAllDashboardData(guildId) {
 
     try {
         // Fetch all data in parallel
-        const [overview, staff, shifts, warnings, settings, promotions] = await Promise.allSettled([
+        const promises = [
             fetchAPI(`/api/dashboard/guild/${guildId}`),
             fetchAPI(`/api/dashboard/guild/${guildId}/staff`),
             fetchAPI(`/api/dashboard/guild/${guildId}/shifts`),
             fetchAPI(`/api/dashboard/guild/${guildId}/warnings`),
             fetchAPI(`/api/dashboard/guild/${guildId}/settings`),
-            fetchAPI(`/api/dashboard/guild/${guildId}/promotion-requirements`)
-        ]);
+            fetchAPI(`/api/dashboard/guild/${guildId}/promotion-requirements`),
+            // Fetch modules
+            fetchAPI(`/api/dashboard/guild/${guildId}/systems/automod`),
+            fetchAPI(`/api/dashboard/guild/${guildId}/systems/welcome`),
+            fetchAPI(`/api/dashboard/guild/${guildId}/systems/autorole`),
+            fetchAPI(`/api/dashboard/guild/${guildId}/systems/logging`),
+            fetchAPI(`/api/dashboard/guild/${guildId}/systems/antispam`),
+            fetchAPI(`/api/dashboard/guild/${guildId}/systems/tickets`)
+        ];
+
+        const [
+            overview, staff, shifts, warnings, settings, promotions,
+            automod, welcome, autorole, logging, antispam, tickets
+        ] = await Promise.allSettled(promises);
 
         // Render all panels
-        if (overview.status === 'fulfilled') {
-            renderOverview(overview.value);
-        }
-        if (staff.status === 'fulfilled') {
-            renderStaffList(staff.value);
-        }
-        if (shifts.status === 'fulfilled') {
-            renderShifts(shifts.value);
-        }
-        if (warnings.status === 'fulfilled') {
-            renderWarnings(warnings.value);
-        }
-        if (settings.status === 'fulfilled') {
-            renderSettings(settings.value);
-        }
-        if (promotions.status === 'fulfilled') {
-            renderPromotions(promotions.value);
-        }
+        if (overview.status === 'fulfilled') renderOverview(overview.value);
+        if (staff.status === 'fulfilled') renderStaffList(staff.value);
+        if (shifts.status === 'fulfilled') renderShifts(shifts.value);
+        if (warnings.status === 'fulfilled') renderWarnings(warnings.value);
+        if (settings.status === 'fulfilled') renderSettings(settings.value);
+        if (promotions.status === 'fulfilled') renderPromotions(promotions.value);
+
+        // Render modules using their HTML prefixes
+        if (automod.status === 'fulfilled') renderSystemModule('am', automod.value);
+        if (welcome.status === 'fulfilled') renderSystemModule('wlc', welcome.value);
+        if (autorole.status === 'fulfilled') renderSystemModule('ar', autorole.value);
+        if (logging.status === 'fulfilled') renderSystemModule('log', logging.value);
+        if (antispam.status === 'fulfilled') renderSystemModule('as', antispam.value);
+        if (tickets.status === 'fulfilled') renderSystemModule('tk', tickets.value);
 
         showToast('Dashboard loaded ✅', 'success');
 
@@ -692,6 +700,103 @@ function setupRealtimeConnection() {
     console.log('[Dashboard] Real-time updates enabled');
 }
 
+/**
+ * Render system module settings
+ */
+function renderSystemModule(prefix, data) {
+    console.log(`[Dashboard] Rendering module prefix: ${prefix}`, data);
+
+    for (const [key, value] of Object.entries(data)) {
+        // e.g., key 'profanity' maps to 'am-profanity'
+        const inputEl = document.getElementById(`${prefix}-${key}`);
+        if (!inputEl) continue;
+
+        if (inputEl.type === 'checkbox') {
+            inputEl.checked = !!value;
+        } else {
+            inputEl.value = value || '';
+        }
+    }
+}
+
+/**
+ * Gather inputs matching a prefix
+ */
+function gatherModuleInputs(prefix) {
+    const updateObj = {};
+    const inputs = document.querySelectorAll(`[id^="${prefix}-"]`);
+    inputs.forEach(input => {
+        const key = input.id.replace(`${prefix}-`, '');
+        if (input.type === 'number') {
+            updateObj[key] = parseInt(input.value) || 0;
+        } else if (input.type === 'checkbox') {
+            updateObj[key] = input.checked;
+        } else {
+            updateObj[key] = input.value;
+        }
+    });
+    return updateObj;
+}
+
+/**
+ * Generic module patcher
+ */
+async function patchModule(endpoint, data, name) {
+    if (!currentGuild) return;
+    try {
+        await fetchAPI(`/api/dashboard/guild/${currentGuild.id}/systems/${endpoint}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data)
+        });
+        showToast(`${name} saved ✅`, 'success');
+    } catch (error) {
+        console.error(`[Dashboard] ${name} save error:`, error);
+        showToast(`Failed to update ${name}`, 'error');
+    }
+}
+
+// Module-specific save hooks matching index.html buttons
+window.saveAutoMod = () => patchModule('automod', gatherModuleInputs('am'), 'Auto-Moderation');
+window.saveWelcome = () => patchModule('welcome', gatherModuleInputs('wlc'), 'Welcome System');
+window.saveAutoRole = () => patchModule('autorole', gatherModuleInputs('ar'), 'Auto-Role');
+window.saveLogging = () => patchModule('logging', gatherModuleInputs('log'), 'Server Logging');
+window.saveAntiSpam = () => patchModule('antispam', gatherModuleInputs('as'), 'Anti-Spam');
+window.saveTickets = () => patchModule('tickets', gatherModuleInputs('tk'), 'Ticket System');
+
+
+/**
+ * Handle Real-Time Moderation Logs
+ */
+async function loadModerationLogs() {
+    if (!currentGuild) return;
+    try {
+        const logs = await fetchAPI(`/api/dashboard/guild/${currentGuild.id}/ticket-logs`);
+        const container = document.getElementById('moderation-logs-list');
+        if (!container) return;
+
+        if (logs.length === 0) {
+            container.innerHTML = '<div class="empty">No moderation logs found</div>';
+            return;
+        }
+
+        container.innerHTML = logs.map(log => `
+            <div class="log-item">
+                <div class="log-header">
+                    <span class="log-type ${log.category}">[${log.category.toUpperCase()}]</span> 
+                    <strong>${escapeHtml(log.username)}</strong>
+                </div>
+                <div class="log-reason">${escapeHtml(log.reason || 'No reason specified')}</div>
+                <div class="log-meta">
+                    <span>By: ${escapeHtml(log.staffName || 'System')}</span>
+                    <span class="date">${formatDate(log.createdAt)}</span>
+                </div>
+            </div>
+        `).join('');
+    } catch (err) {
+        console.error('[Dashboard] Mod Logs Error:', err);
+    }
+}
+
 // Initialize on load
 document.addEventListener('DOMContentLoaded', initDashboard);
 
@@ -701,3 +806,5 @@ window.selectGuild = selectGuild;
 window.switchPanel = switchPanel;
 window.saveSettings = saveSettings;
 window.savePromotionRequirements = savePromotionRequirements;
+window.saveSystemModule = saveSystemModule;
+window.loadModerationLogs = loadModerationLogs;
