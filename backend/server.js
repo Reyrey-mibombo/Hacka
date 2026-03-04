@@ -7,11 +7,16 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 
 const db = require('./database/connection');
-const authRoutes = require('./routes/auth');
+const { router: authRoutes } = require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard');
 const guildRoutes = require('./routes/guild');
 const moderationRoutes = require('./routes/moderation');
 const systemRoutes = require('./routes/systems');
+const levelingRoutes = require('./routes/leveling');
+const reactionRolesRoutes = require('./routes/reactionRoles');
+const giveawaysRoutes = require('./routes/giveaways');
+const analyticsRoutes = require('./routes/analytics');
+const extendedRoutes = require('./routes/extended');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -61,6 +66,11 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/dashboard/guild', guildRoutes);
 app.use('/api/dashboard/guild', moderationRoutes);
 app.use('/api/dashboard/guild', systemRoutes);
+app.use('/api/dashboard/guild', levelingRoutes);
+app.use('/api/dashboard/guild', reactionRolesRoutes);
+app.use('/api/dashboard/guild', giveawaysRoutes);
+app.use('/api/dashboard/guild', analyticsRoutes);
+app.use('/api/dashboard/guild', extendedRoutes);
 
 // Serve static files (frontend) in production
 if (NODE_ENV === 'production') {

@@ -1,4 +1,4 @@
-const express = require('axios');
+const express = require('express');
 const db = require('../database/connection');
 const { verifyDiscordToken } = require('./auth');
 
