@@ -826,7 +826,8 @@ function switchPanel(panel) {
         autorole: ['Auto-Role', 'Automatically assign roles when members join.'],
         logging: ['Server Logging', 'Log server events to dedicated channels.'],
         antispam: ['Anti-Spam', 'Rate limiting and spam prevention.'],
-        tickets: ['Ticket System', 'Member support ticket configuration.']
+        tickets: ['Ticket System', 'Member support ticket configuration.'],
+        customcommands: ['Custom Commands', 'Manage your own command triggers and auto-replies.']
     };
     const [title, sub] = titles[panel] || ['Dashboard', ''];
     document.getElementById('dashTitle').textContent = title;
@@ -847,6 +848,7 @@ function switchPanel(panel) {
     if (panel === 'ticketlogs') loadTicketLogs(guildId);
     if (panel === 'activitylog') loadActivityLog(guildId);
     if (panel === 'promohistory') loadPromoHistory(guildId);
+    if (panel === 'customcommands') loadCustomCommands(guildId);
 }
 
 // ══════════════════════════════════════
