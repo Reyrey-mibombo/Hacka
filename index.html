@@ -440,6 +440,9 @@
       <div class="sidebar-item" data-panel="tickets" onclick="switchPanel('tickets')">
         <span>🎫</span> Ticket System
       </div>
+      <div class="sidebar-item" data-panel="customcommands" onclick="switchPanel('customcommands')">
+        <span>🤖</span> Custom Commands
+      </div>
       <div class="sidebar-item" data-panel="alerts" onclick="switchPanel('alerts')">
         <span>🔔</span> Activity Alerts
       </div>
@@ -1275,6 +1278,26 @@
               <div><input type="number" id="tk-max" class="form-input" placeholder="e.g. 1" min="1" max="5"
                   style="max-width:100px;margin-top:8px"></div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CUSTOM COMMANDS -->
+      <div class="dash-panel" id="panel-customcommands" style="display:none">
+        <div class="sys-module-header">
+          <div>
+            <div class="card-title" style="margin:0">🤖 Custom Commands & Auto-Responder</div>
+            <div class="card-desc" style="margin:6px 0 0">Create your own commands (e.g. !rules) and automatic replies for common questions.</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveCustomCommands()">Save All Commands</button>
+        </div>
+        <div class="sys-modules">
+          <div class="sys-module" style="padding:24px;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);text-align:center;cursor:pointer;border-radius:12px;margin-bottom:20px" onclick="addCustomCommand()">
+            <span style="font-size:1.5rem;display:block;margin-bottom:8px">+</span>
+            <span style="font-weight:600;color:var(--primary-color)">Create New Custom Command</span>
+          </div>
+          <div id="customCommandsList" style="display:flex;flex-direction:column;gap:15px">
+            <!-- Commands will be rendered here -->
           </div>
         </div>
       </div>

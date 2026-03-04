@@ -629,6 +629,111 @@ async function savePromotions() {
     }
 }
 
+// ── CUSTOM COMMANDS ──────────────────────────────────────────
+let currentCustomCommands = [];
+
+async function loadCustomCommands(guildId) {
+    const list = document.getElementById('customCommandsList');
+    if (!list) return;
+    try {
+        const data = await fetchAPI(`/api/dashboard/guild/${guildId}/custom-commands`);
+        currentCustomCommands = data.commands || [];
+        renderCustomCommands();
+    } catch {
+        list.innerHTML = '<div class="table-empty">Failed to load custom commands.</div>';
+    }
+}
+
+function renderCustomCommands() {
+    const list = document.getElementById('customCommandsList');
+    if (!list) return;
+
+    if (currentCustomCommands.length === 0) {
+        list.innerHTML = '<div class="table-empty" style="border:1px dashed rgba(255,255,255,0.05);border-radius:12px;padding:30px">No custom commands created yet. Click "Create New" to start!</div>';
+        return;
+    }
+
+    list.innerHTML = currentCustomCommands.map((cmd, idx) => `
+        <div class="sys-module" style="background:rgba(255,255,255,0.03);border-radius:12px;padding:20px;border:1px solid rgba(255,255,255,0.05)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
+                <div style="font-weight:600;color:var(--primary-color)">#${idx + 1} Command Configuration</div>
+                <button class="btn btn-ghost btn-sm" style="color:#ff4757" onclick="removeCustomCommand(${idx})">🗑️ Remove</button>
+            </div>
+            <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:15px">
+                <div>
+                    <label>Trigger (Keyword)</label>
+                    <input type="text" value="${cmd.trigger}" onchange="updateCMD(${idx}, 'trigger', this.value)" class="form-input" placeholder="e.g. !rules">
+                </div>
+                <div>
+                    <label>Match Type</label>
+                    <select onchange="updateCMD(${idx}, 'type', this.value)" class="form-input">
+                        <option value="exact" ${cmd.type === 'exact' ? 'selected' : ''}>Exact Match</option>
+                        <option value="starts" ${cmd.type === 'starts' ? 'selected' : ''}>Starts With</option>
+                        <option value="contains" ${cmd.type === 'contains' ? 'selected' : ''}>Contains Word</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row" style="margin-top:15px">
+                <label>Response Content</label>
+                <textarea onchange="updateCMD(${idx}, 'response', this.value)" class="form-input" rows="3" placeholder="What should the bot say?">${cmd.response}</textarea>
+            </div>
+            <div style="display:flex;gap:30px;margin-top:15px;align-items:center">
+                <div style="display:flex;align-items:center;gap:10px">
+                    <label style="margin:0;font-size:13px">Use Embed?</label>
+                    <label class="toggle"><input type="checkbox" ${cmd.isEmbed ? 'checked' : ''} onchange="updateCMD(${idx}, 'isEmbed', this.checked)"><span class="toggle-slider"></span></label>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px">
+                    <label style="margin:0;font-size:13px">Enabled</label>
+                    <label class="toggle"><input type="checkbox" ${cmd.enabled ? 'checked' : ''} onchange="updateCMD(${idx}, 'enabled', this.checked)"><span class="toggle-slider"></span></label>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function updateCMD(idx, key, val) {
+    currentCustomCommands[idx][key] = val;
+}
+
+function addCustomCommand() {
+    currentCustomCommands.unshift({
+        trigger: '',
+        response: '',
+        type: 'exact',
+        isEmbed: true,
+        enabled: true
+    });
+    renderCustomCommands();
+}
+
+function removeCustomCommand(idx) {
+    currentCustomCommands.splice(idx, 1);
+    renderCustomCommands();
+}
+
+async function saveCustomCommands() {
+    const guildId = currentGuild?.id;
+    if (!guildId) return;
+
+    // Basic validation
+    if (currentCustomCommands.some(c => !c.trigger || !c.response)) {
+        toast('⚠️ All commands must have a trigger and a response!');
+        return;
+    }
+
+    try {
+        const res = await fetch(`${CONFIG.API_BASE}/api/dashboard/guild/${guildId}/custom-commands`, {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ commands: currentCustomCommands })
+        });
+        if (!res.ok) throw new Error();
+        toast('Custom Commands saved successfully! 🤖');
+    } catch {
+        toast('Failed to save custom commands.');
+    }
+}
+
 function initChart(shifts) {
     const ctx = document.getElementById('activityChart')?.getContext('2d');
     if (!ctx) return;
