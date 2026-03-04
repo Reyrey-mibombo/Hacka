@@ -1,11 +1,44 @@
 // ============================================================
 // STRATA — Premium Discord Staff Management Bot
-// All data is real, fetched from the live backend API.
+// All data is real, fetched from the backend API.
 // ============================================================
+
+/**
+ * Environment-based API Configuration
+ *
+ * The API URL can be configured in three ways (priority order):
+ * 1. window.API_URL global variable (set before loading app.js)
+ * 2. <meta name="api-url" content="http://localhost:3000/api"> tag in HTML
+ * 3. Default: http://localhost:3000/api (local development)
+ *
+ * For production deployment, set either:
+ * - window.API_URL = 'https://your-domain.com/api' in a script tag before this file
+ * - Or add: <meta name="api-url" content="https://your-domain.com/api">
+ *
+ * WebSocket URL is automatically derived from API_BASE (http -> ws, https -> wss)
+ */
+const API_BASE_URL = (() => {
+    // Check for global override
+    if (typeof window !== 'undefined' && window.API_URL) {
+        return window.API_URL.replace(/\/$/, '');
+    }
+    // Check for meta tag
+    const metaTag = document.querySelector('meta[name="api-url"]');
+    if (metaTag) {
+        return metaTag.content.replace(/\/$/, '');
+    }
+    // Default to local development
+    return 'http://localhost:3000/api';
+})();
+
+const WS_BASE_URL = API_BASE_URL.replace(/^http/, 'ws').replace(/\/api$/, '');
 
 const CONFIG = {
     CLIENT_ID: '1473264644910088213',
-    API_BASE: 'https://uwu-chan-saas-production.up.railway.app',
+    get API_BASE() { return API_BASE_URL; },
+    get WS_URL() { return WS_BASE_URL; },
+    MAX_RETRIES: 3,
+    RETRY_DELAY: 1000,
     get REDIRECT_URI() {
         return encodeURIComponent(window.location.origin + window.location.pathname);
     },
@@ -42,16 +75,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadPublicStats() {
     try {
-        const res = await fetch(`${CONFIG.API_BASE}/api/dashboard/stats`);
-        if (!res.ok) throw new Error();
-        const d = await res.json();
+        const d = await fetchAPI('/api/dashboard/stats');
 
-        // Real numbers from live API
+        // Real numbers from API
         setStatText('stat-servers', '2,400+');          // Public server count (hardcoded baseline)
         animateStat('stat-staff', d.staffCount ?? 1);
         animateStat('stat-shifts', d.totalShifts ?? 9);
         setStatText('stat-commands', String(d.commandCount ?? 271));
-    } catch {
+    } catch (error) {
+        console.error('[Dashboard] Failed to load stats:', error);
+        toast('Using fallback stats - backend unavailable');
         setStatText('stat-servers', '2,400+');
         setStatText('stat-staff', '1');
         setStatText('stat-shifts', '9');
@@ -161,6 +194,198 @@ function toggleMobileNav() {
 }
 
 // ══════════════════════════════════════
+// API FETCH WITH RETRY & ERROR HANDLING
+// ══════════════════════════════════════
+
+/**
+ * Fetch API with retry logic and user-friendly error handling
+ * @param {string} endpoint - API endpoint (with or without leading /)
+ * @param {object} options - Fetch options
+ * @param {number} retries - Number of retries left
+ * @returns {Promise<any>} Response data
+ */
+async function fetchAPI(endpoint, options = {}, retries = CONFIG.MAX_RETRIES) {
+    const url = endpoint.startsWith('http') ? endpoint : `${CONFIG.API_BASE}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+
+    try {
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+
+        // Handle CORS errors
+        if (response.status === 0) {
+            throw new Error('Network error - CORS may be blocked. Please ensure the backend server is running and CORS is properly configured.');
+        }
+
+        // Handle specific HTTP errors
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = errorData.message || errorData.error || `HTTP ${response.status}: ${response.statusText}`;
+
+            // Handle specific status codes
+            switch (response.status) {
+                case 401:
+                    throw new Error('Session expired. Please log in again.');
+                case 403:
+                    throw new Error('You do not have permission to perform this action.');
+                case 404:
+                    throw new Error('Resource not found.');
+                case 429:
+                    throw new Error('Too many requests. Please wait a moment and try again.');
+                case 500:
+                case 502:
+                case 503:
+                case 504:
+                    throw new Error('Server error. The backend may be restarting or unavailable.');
+                default:
+                    throw new Error(errorMessage);
+            }
+        }
+
+        // Handle empty responses
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return await response.json();
+        }
+        return await response.text();
+
+    } catch (error) {
+        // Network errors (fetch failed)
+        if (error.name === 'TypeError' || error.message.includes('fetch')) {
+            const isLocalhost = CONFIG.API_BASE.includes('localhost') || CONFIG.API_BASE.includes('127.0.0.1');
+            const backendHint = isLocalhost
+                ? 'Is the backend server running on port 3000? (npm run dev or node server.js)'
+                : 'The backend server may be down or unreachable.';
+
+            if (retries > 0) {
+                toast(`Connection failed. Retrying... (${retries} attempts left)`);
+                await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY));
+                return fetchAPI(endpoint, options, retries - 1);
+            }
+
+            throw new Error(`Cannot connect to backend. ${backendHint} ${error.message}`);
+        }
+
+        // Don't retry on client errors (4xx)
+        if (error.message.includes('Session expired') ||
+            error.message.includes('permission') ||
+            error.message.includes('not found')) {
+            throw error;
+        }
+
+        // Retry on other errors if retries left
+        if (retries > 0) {
+            toast(`Request failed. Retrying... (${retries} attempts left)`);
+            await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY));
+            return fetchAPI(endpoint, options, retries - 1);
+        }
+
+        throw error;
+    }
+}
+
+// ══════════════════════════════════════
+// API FETCH WITH RETRY & ERROR HANDLING
+// ══════════════════════════════════════
+
+/**
+ * Fetch API with retry logic and user-friendly error handling
+ * @param {string} endpoint - API endpoint (with or without leading /)
+ * @param {object} options - Fetch options
+ * @param {number} retries - Number of retries left
+ * @returns {Promise<any>} Response data
+ */
+async function fetchAPI(endpoint, options = {}, retries = CONFIG.MAX_RETRIES) {
+    const url = endpoint.startsWith('http') ? endpoint : `${CONFIG.API_BASE}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+
+    try {
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+
+        // Handle CORS errors
+        if (response.status === 0) {
+            throw new Error('Network error - CORS may be blocked. Please ensure the backend server is running and CORS is properly configured.');
+        }
+
+        // Handle specific HTTP errors
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = errorData.message || errorData.error || `HTTP ${response.status}: ${response.statusText}`;
+
+            // Handle specific status codes
+            switch (response.status) {
+                case 401:
+                    throw new Error('Session expired. Please log in again.');
+                case 403:
+                    throw new Error('You do not have permission to perform this action.');
+                case 404:
+                    throw new Error('Resource not found.');
+                case 429:
+                    throw new Error('Too many requests. Please wait a moment and try again.');
+                case 500:
+                case 502:
+                case 503:
+                case 504:
+                    throw new Error('Server error. The backend may be restarting or unavailable.');
+                default:
+                    throw new Error(errorMessage);
+            }
+        }
+
+        // Handle empty responses
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return await response.json();
+        }
+        return await response.text();
+
+    } catch (error) {
+        // Network errors (fetch failed)
+        if (error.name === 'TypeError' || error.message.includes('fetch')) {
+            const isLocalhost = CONFIG.API_BASE.includes('localhost') || CONFIG.API_BASE.includes('127.0.0.1');
+            const backendHint = isLocalhost
+                ? 'Is the backend server running on port 3000? (npm run dev or node server.js)'
+                : 'The backend server may be down or unreachable.';
+
+            if (retries > 0) {
+                toast(`Connection failed. Retrying... (${retries} attempts left)`);
+                await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY));
+                return fetchAPI(endpoint, options, retries - 1);
+            }
+
+            throw new Error(`Cannot connect to backend. ${backendHint} ${error.message}`);
+        }
+
+        // Don't retry on client errors (4xx)
+        if (error.message.includes('Session expired') ||
+            error.message.includes('permission') ||
+            error.message.includes('not found')) {
+            throw error;
+        }
+
+        // Retry on other errors if retries left
+        if (retries > 0) {
+            toast(`Request failed. Retrying... (${retries} attempts left)`);
+            await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY));
+            return fetchAPI(endpoint, options, retries - 1);
+        }
+
+        throw error;
+    }
+}
+
+// ══════════════════════════════════════
 // AUTH
 // ══════════════════════════════════════
 
@@ -201,15 +426,15 @@ async function showGuildPicker() {
     grid.innerHTML = '<div style="color:#5c5c78;padding:40px;text-align:center">Loading your servers...</div>';
 
     try {
-        const res = await fetch(`${CONFIG.API_BASE}/api/dashboard/guilds`, {
+        managedGuilds = await fetchAPI('/api/dashboard/guilds', {
             headers: { Authorization: `Bearer ${accessToken}` }
         });
-        if (!res.ok) throw new Error();
-        managedGuilds = await res.json();
         renderGuildPicker();
-    } catch {
-        grid.innerHTML = '<div style="color:#ff4757;padding:40px;text-align:center">Failed to load servers. Please try again.</div>';
+    } catch (error) {
+        console.error('[Dashboard] Failed to load guilds:', error);
+        grid.innerHTML = `<div style="color:#ff4757;padding:40px;text-align:center">${error.message || 'Failed to load servers. Please try again.'}</div>`;
     }
+}
 }
 
 function renderGuildPicker() {
@@ -539,16 +764,16 @@ async function saveSettings() {
     // Remove null/undefined keys
     Object.keys(payload).forEach(k => { if (payload[k] == null) delete payload[k]; });
     try {
-        const res = await fetch(`${CONFIG.API_BASE}/api/dashboard/guild/${guildId}/settings`, {
+        await fetchAPI(`/api/dashboard/guild/${guildId}/settings`, {
             method: 'PATCH',
-            headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+            headers: { Authorization: `Bearer ${accessToken}` },
             body: JSON.stringify(payload)
         });
-        if (!res.ok) throw new Error();
         toast('Settings saved ✅');
-    } catch {
-        toast('Failed to save settings. Check your permissions.');
+    } catch (error) {
+        toast(error.message || 'Failed to save settings. Check your permissions.');
     }
+}
 }
 
 async function loadPromotions(guildId) {
@@ -617,15 +842,14 @@ async function savePromotions() {
         payload.rankRoles[r] = role || null;
     });
     try {
-        const res = await fetch(`${CONFIG.API_BASE}/api/dashboard/guild/${guildId}/promotion-requirements`, {
+        await fetchAPI(`/api/dashboard/guild/${guildId}/promotion-requirements`, {
             method: 'PATCH',
-            headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+            headers: { Authorization: `Bearer ${accessToken}` },
             body: JSON.stringify(payload)
         });
-        if (!res.ok) throw new Error();
         toast('Promotion system settings saved ✅ — Bot will use these settings natively.');
-    } catch {
-        toast('Failed to save promotion requirements.');
+    } catch (error) {
+        toast(error.message || 'Failed to save promotion requirements.');
     }
 }
 
@@ -722,15 +946,14 @@ async function saveCustomCommands() {
     }
 
     try {
-        const res = await fetch(`${CONFIG.API_BASE}/api/dashboard/guild/${guildId}/custom-commands`, {
+        await fetchAPI(`/api/dashboard/guild/${guildId}/custom-commands`, {
             method: 'PATCH',
-            headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+            headers: { Authorization: `Bearer ${accessToken}` },
             body: JSON.stringify({ commands: currentCustomCommands })
         });
-        if (!res.ok) throw new Error();
         toast('Custom Commands saved successfully! 🤖');
-    } catch {
-        toast('Failed to save custom commands.');
+    } catch (error) {
+        toast(error.message || 'Failed to save custom commands.');
     }
 }
 
@@ -841,15 +1064,14 @@ async function saveStaffRewards() {
     const guildId = currentGuild?.id;
     if (!guildId) return;
     try {
-        const res = await fetch(`${CONFIG.API_BASE}/api/dashboard/guild/${guildId}/staff-rewards`, {
+        await fetchAPI(`/api/dashboard/guild/${guildId}/staff-rewards`, {
             method: 'PATCH',
-            headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+            headers: { Authorization: `Bearer ${accessToken}` },
             body: JSON.stringify({ achievements: currentAchievements, roleRewards: currentRoleRewards })
         });
-        if (!res.ok) throw new Error();
         toast('Staff Rewards saved successfully! 🏆');
-    } catch {
-        toast('Failed to save staff rewards.');
+    } catch (error) {
+        toast(error.message || 'Failed to save staff rewards.');
     }
 }
 
@@ -988,9 +1210,15 @@ async function loadSystemSettings(system, applyFn) {
     try {
         const isRootNode = ['alerts', 'applications', 'branding'].includes(system);
         const endpoint = isRootNode ? `/api/dashboard/guild/${guildId}/${system}` : `/api/dashboard/guild/${guildId}/systems/${system}`;
-        const data = await fetchAPI(endpoint);
+        const data = await fetchAPI(endpoint, {
+            headers: { Authorization: `Bearer ${accessToken}` }
+        });
         if (data) applyFn(data);
-    } catch { /* system not configured yet, use defaults */ }
+    } catch (error) {
+        // system not configured yet, use defaults
+        console.log(`[Dashboard] ${system} not configured yet:`, error.message);
+    }
+}
 }
 
 async function saveSystem(system, payload) {
@@ -999,16 +1227,15 @@ async function saveSystem(system, payload) {
     try {
         const isRootNode = ['alerts', 'applications', 'branding'].includes(system);
         const endpoint = isRootNode ? `/api/dashboard/guild/${guildId}/${system}` : `/api/dashboard/guild/${guildId}/systems/${system}`;
-        const res = await fetch(`${CONFIG.API_BASE}${endpoint}`, {
+        await fetchAPI(endpoint, {
             method: 'PATCH',
-            headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+            headers: { Authorization: `Bearer ${accessToken}` },
             body: JSON.stringify(payload)
         });
-        if (!res.ok) throw new Error(`${res.status}`);
         toast(`✅ ${system.charAt(0).toUpperCase() + system.slice(1)} settings saved — bot will apply changes immediately.`);
-    } catch (e) {
-        toast(`Failed to save. Make sure the bot is properly authorized.`);
-        console.error(e);
+    } catch (error) {
+        toast(error.message || `Failed to save. Make sure the bot is properly authorized.`);
+        console.error(error);
     }
 }
 
@@ -1238,15 +1465,6 @@ function saveTickets() {
 // ══════════════════════════════════════
 // HELPERS
 // ══════════════════════════════════════
-
-async function fetchAPI(path, opts = {}) {
-    const res = await fetch(`${CONFIG.API_BASE}${path}`, {
-        ...opts,
-        headers: { ...(opts.headers || {}), Authorization: `Bearer ${accessToken}` }
-    });
-    if (!res.ok) throw new Error(`API ${res.status}: ${path}`);
-    return res.json();
-}
 
 function toast(msg, duration = 3000) {
     const el = document.getElementById('toast');
