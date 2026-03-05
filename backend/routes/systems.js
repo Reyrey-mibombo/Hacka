@@ -46,6 +46,16 @@ router.patch('/systems/:system', verifyDiscordToken, (req, res) => {
             return res.status(404).json({ error: 'Unknown system' });
         }
 
+        // Ensure guild exists in database
+        const guildExists = db.prepare('SELECT 1 FROM guilds WHERE id = ?').get(guildId);
+        if (!guildExists) {
+            db.prepare(`
+                INSERT INTO guilds (id, name, icon, owner_id, tier)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO NOTHING
+            `).run(guildId, 'Unknown Server', null, req.discordUser?.id || 'unknown', 'free');
+        }
+
         // Map UI data to storage format
         const { enabled, config } = mapUItoConfig(system, data);
 
@@ -58,12 +68,15 @@ router.patch('/systems/:system', verifyDiscordToken, (req, res) => {
                 updated_at = CURRENT_TIMESTAMP
         `);
 
-        stmt.run(guildId, system, JSON.stringify(config), enabled ? 1 : 0);
+        const result = stmt.run(guildId, system, JSON.stringify(config), enabled ? 1 : 0);
+
+        // Force WAL checkpoint to ensure data is persisted to main database
+        db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
 
         // Log activity
         logActivity(guildId, req.discordUser?.id, `${system}_updated`, { enabled });
 
-        res.json({ success: true, message: `${system} configuration saved` });
+        res.json({ success: true, message: `${system} configuration saved`, changes: result.changes });
     } catch (error) {
         console.error(`[Systems] Update ${req.params.system} error:`, error);
         res.status(500).json({ error: 'Failed to update system configuration' });

@@ -1,8 +1,8 @@
-const express = require('axios');
+const express = require('express');
 const db = require('../database/connection');
 const { verifyDiscordToken } = require('./auth');
 
-const router = require('express').Router({ mergeParams: true });
+const router = express.Router({ mergeParams: true });
 
 // Get guild settings
 router.get('/settings', verifyDiscordToken, (req, res) => {
@@ -47,34 +47,49 @@ router.patch('/settings', verifyDiscordToken, (req, res) => {
             shiftTrackingEnabled
         } = req.body;
 
+        // Ensure guild exists before updating - create if not exists
+        const guildExists = db.prepare('SELECT 1 FROM guilds WHERE id = ?').get(guildId);
+        if (!guildExists) {
+            // Create guild entry with default values
+            db.prepare(`
+                INSERT INTO guilds (id, name, icon, owner_id, tier)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO NOTHING
+            `).run(guildId, 'Unknown Server', null, req.discordUser?.id || 'unknown', 'free');
+        }
+
+        // Use INSERT OR REPLACE pattern to ensure settings are persisted
         const stmt = db.prepare(`
             UPDATE guilds SET
-                mod_channel_id = COALESCE(?, mod_channel_id),
-                staff_channel_id = COALESCE(?, staff_channel_id),
-                log_channel_id = COALESCE(?, log_channel_id),
-                warn_threshold = COALESCE(?, warn_threshold),
-                min_shift_minutes = COALESCE(?, min_shift_minutes),
-                auto_promotion = COALESCE(?, auto_promotion),
-                shift_tracking_enabled = COALESCE(?, shift_tracking_enabled),
+                mod_channel_id = ?,
+                staff_channel_id = ?,
+                log_channel_id = ?,
+                warn_threshold = ?,
+                min_shift_minutes = ?,
+                auto_promotion = ?,
+                shift_tracking_enabled = ?,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
         `);
 
-        stmt.run(
-            modChannelId,
-            staffChannelId,
-            logChannelId,
-            warnThreshold,
-            minShiftMinutes,
+        const result = stmt.run(
+            modChannelId ?? null,
+            staffChannelId ?? null,
+            logChannelId ?? null,
+            warnThreshold ?? 3,
+            minShiftMinutes ?? 30,
             autoPromotion ? 1 : 0,
-            shiftTrackingEnabled ? 1 : 0,
+            shiftTrackingEnabled ? 1 : 1,
             guildId
         );
 
-        // Log the change
+        // Force WAL checkpoint to ensure data is persisted to main database
+        db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+
+        // Log activity
         logActivity(guildId, req.discordUser?.id, 'settings_updated', { fields: Object.keys(req.body) });
 
-        res.json({ success: true, message: 'Settings updated' });
+        res.json({ success: true, message: 'Settings updated', changes: result.changes });
     } catch (error) {
         console.error('[Guild] Update settings error:', error);
         res.status(500).json({ error: 'Failed to update settings' });
@@ -145,6 +160,16 @@ router.patch('/promotion-requirements', verifyDiscordToken, (req, res) => {
         const { guildId } = req.params;
         const { requirements, rankRoles, promotionChannel } = req.body;
 
+        // Ensure guild exists in database
+        const guildExists = db.prepare('SELECT 1 FROM guilds WHERE id = ?').get(guildId);
+        if (!guildExists) {
+            db.prepare(`
+                INSERT INTO guilds (id, name, icon, owner_id, tier)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO NOTHING
+            `).run(guildId, 'Unknown Server', null, req.discordUser?.id || 'unknown', 'free');
+        }
+
         const insertStmt = db.prepare(`
             INSERT INTO promotion_requirements (
                 guild_id, rank_name, rank_role_id, points_required, shifts_required,
@@ -194,6 +219,9 @@ router.patch('/promotion-requirements', verifyDiscordToken, (req, res) => {
             });
         }
 
+        // Force WAL checkpoint to ensure data is persisted to main database
+        db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+
         logActivity(guildId, req.discordUser?.id, 'promotion_requirements_updated', { ranks: Object.keys(requirements || {}) });
 
         res.json({ success: true, message: 'Promotion requirements updated' });
@@ -233,6 +261,16 @@ router.patch('/custom-commands', verifyDiscordToken, (req, res) => {
         const { guildId } = req.params;
         const { commands } = req.body;
 
+        // Ensure guild exists in database
+        const guildExists = db.prepare('SELECT 1 FROM guilds WHERE id = ?').get(guildId);
+        if (!guildExists) {
+            db.prepare(`
+                INSERT INTO guilds (id, name, icon, owner_id, tier)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO NOTHING
+            `).run(guildId, 'Unknown Server', null, req.discordUser?.id || 'unknown', 'free');
+        }
+
         // Delete existing commands
         db.prepare('DELETE FROM custom_commands WHERE guild_id = ?').run(guildId);
 
@@ -255,6 +293,9 @@ router.patch('/custom-commands', verifyDiscordToken, (req, res) => {
                 );
             });
         }
+
+        // Force WAL checkpoint to ensure data is persisted to main database
+        db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
 
         logActivity(guildId, req.discordUser?.id, 'custom_commands_updated', { count: commands?.length || 0 });
 
@@ -324,6 +365,16 @@ router.patch('/staff-rewards', verifyDiscordToken, (req, res) => {
         const { guildId } = req.params;
         const { achievements, roleRewards } = req.body;
 
+        // Ensure guild exists in database
+        const guildExists = db.prepare('SELECT 1 FROM guilds WHERE id = ?').get(guildId);
+        if (!guildExists) {
+            db.prepare(`
+                INSERT INTO guilds (id, name, icon, owner_id, tier)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO NOTHING
+            `).run(guildId, 'Unknown Server', null, req.discordUser?.id || 'unknown', 'free');
+        }
+
         // Update achievements
         if (achievements) {
             db.prepare('DELETE FROM achievements WHERE guild_id = ?').run(guildId);
@@ -361,6 +412,9 @@ router.patch('/staff-rewards', verifyDiscordToken, (req, res) => {
                 stmt.run(guildId, rr.name, rr.roleId, rr.requiredPoints || 0);
             });
         }
+
+        // Force WAL checkpoint to ensure data is persisted to main database
+        db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
 
         logActivity(guildId, req.discordUser?.id, 'staff_rewards_updated', { 
             achievements: achievements?.length || 0,
@@ -424,6 +478,16 @@ function getSystemConfig(guildId, systemType, res) {
 
 function updateSystemConfig(guildId, systemType, data, userId, res) {
     try {
+        // Ensure guild exists in database
+        const guildExists = db.prepare('SELECT 1 FROM guilds WHERE id = ?').get(guildId);
+        if (!guildExists) {
+            db.prepare(`
+                INSERT INTO guilds (id, name, icon, owner_id, tier)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO NOTHING
+            `).run(guildId, 'Unknown Server', null, userId || 'unknown', 'free');
+        }
+
         const stmt = db.prepare(`
             INSERT INTO system_configs (guild_id, system_type, config_json, enabled)
             VALUES (?, ?, ?, ?)
@@ -437,11 +501,14 @@ function updateSystemConfig(guildId, systemType, data, userId, res) {
         const enabled = config.enabled !== undefined ? config.enabled : true;
         delete config.enabled;
 
-        stmt.run(guildId, systemType, JSON.stringify(config), enabled ? 1 : 0);
+        const result = stmt.run(guildId, systemType, JSON.stringify(config), enabled ? 1 : 0);
+
+        // Force WAL checkpoint to ensure data is persisted to main database
+        db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
 
         logActivity(guildId, userId, `${systemType}_updated`, { enabled });
 
-        res.json({ success: true, message: 'Configuration updated' });
+        res.json({ success: true, message: 'Configuration updated', changes: result.changes });
     } catch (error) {
         console.error(`[Guild] Update ${systemType} config error:`, error);
         res.status(500).json({ error: 'Failed to update configuration' });
